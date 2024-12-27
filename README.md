@@ -1,4 +1,4 @@
-# One Square Meter vs Bitcoin
+# Square Meter vs. Bitcoin
 
 A Flask-based web application that compares the average price per square meter of real estate in Sofia with the current price of Bitcoin (BTC). The app dynamically fetches real estate prices and Bitcoin prices, calculates their ratio, and provides visual insights using Chart.js.
 
