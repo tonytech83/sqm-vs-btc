@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apartment Price vs BTC</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+  </head>
+  <body>
+    <div class="page-title">
+      <h1>SQM Price vs. BTC Price</h1>
+      <h3>
+        To create the graph showing the relationship between the price of a
+        square meter in Sofia and the price of Bitcoin (BTC)
+      </h3>
+    </div>
+
+    <table>
+      <tr>
+        <td class="td-title">Date</td>
+        <td>{{date}}</td>
+      </tr>
+      <tr>
+        <td class="td-title">BTC</td>
+        <td>{{current_price}} €</td>
+      </tr>
+    </table>
+
+    <canvas id="priceChart" width="400" height="200"></canvas>
+
+    <script>
+      let priceChart = new Chart(
+        document.getElementById("priceChart").getContext("2d"),
+        {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                backgroundColor: "rgba(247, 147, 26, 1.0)",
+                label: "Ratio sqm Price vs. BTC Price",
+                data: [],
+                borderColor: "rgba(247, 147, 26, 1.0)",
+                borderWidth: 2,
+                fill: false,
+              },
+            ],
+          },
+          options: {
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: "Time",
+                  color: "#D8DEE9",
+                  font: { size: 18 },
+                },
+                ticks: {
+                  color: "rgba(216, 222, 233, 1.0)",
+                  font: { size: 14 },
+                },
+                grid: { color: "rgba(216, 222, 233, 1.0)" },
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: "Ratio",
+                  color: "#D8DEE9",
+                  font: { size: 18 },
+                },
+                ticks: {
+                  color: "rgba(216, 222, 233, 1.0)",
+                  font: { size: 14 },
+                },
+                grid: { color: "rgba(216, 222, 233, 1.0)" },
+              },
+            },
+          },
+        }
+      );
+
+      function updateCharts() {
+        fetch("/data")
+          .then((response) => response.json())
+          .then((data) => {
+            let date = data.date;
+
+            priceChart.data.labels.push(date);
+            priceChart.data.datasets[0].data.push(data.ratio);
+            priceChart.update();
+          });
+      }
+
+      setInterval(updateCharts, 86400000);
+      // One second - for test purposes
+    //   setInterval(updateCharts, 5000);
+    </script>
+  </body>
+</html>
