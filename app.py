@@ -59,7 +59,7 @@ def get_ratio():
     btc_price = get_btc_price_in_eur()
     ratio = apt_price / btc_price
     return {
-        "date": datetime.now().strftime("%d-%m-%Y"),
+        "date": datetime.now().strftime("%d/%m/%Y"),
         "ratio": ratio,
     }
 
@@ -72,7 +72,7 @@ def data():
 
 @app.route("/")
 def index():
-    date = datetime.now().strftime("%d-%m-%Y")
+    date = datetime.now().strftime("%d/%m/%Y")
     current_price = f"{get_btc_price_in_eur():.2f}"
     return render_template("index.html", date=date, current_price=current_price)
 

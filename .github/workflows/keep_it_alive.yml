@@ -16,7 +16,7 @@ jobs:
             echo "Execute first GET requests"
             response=$(curl -sS https://sqm-vs-btc.onrender.com/)
             echo "Request done"
-            echo "Wait 3 seconds before next request"
+            echo "Wait 10 seconds before next request"
             sleep 10
             echo "Execute second GET requests"
             response=$(curl -sS https://sqm-vs-btc.onrender.com/data)
