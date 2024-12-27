@@ -1,0 +1,50 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Use Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip" # caching pip dependencies
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Start Flask App
+        run: flask run --host=0.0.0.0 &
+
+      - name: Check Index Endpoint
+        run: |
+          sleep 3 # Wait for the server to start
+          curl -f http://127.0.0.1:5000 || (echo "Index endpoint failed" && exit 1)
+
+      - name: Check Data Endpoint
+        run: |
+          curl -f http://127.0.0.1:5000/data || (echo "Data endpoint failed" && exit 1)
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Render
+        uses: JorgeLNJunior/render-deploy@v1.4.4
+        with:
+          service_id: ${{ secrets.RENDER_SERVICE_ID }}
+          api_key: ${{ secrets.RENDER_API_KEY }}
+          wait_deploy: true
