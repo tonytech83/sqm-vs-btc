@@ -22,14 +22,15 @@ A Flask-based web application that compares the average price per square meter o
 ## Project Structure
 
 ```plain
-one-square-meter-vs-btc/
+sqm-vs-btc/
 ├── app.py                # Main application file
+├── Dockerfile
+├── README.md             # Documentation for the project
 ├── requirements.txt      # List of Python dependencies
 ├── static/
 │   └── styles.css        # Custom styles
-├── templates/
-│   └── index.html        # HTML template for the web app
-└── README.md             # Documentation for the project
+└── templates/
+    └── index.html        # HTML template for the web app
 ```
 
 ## Installation and Setup

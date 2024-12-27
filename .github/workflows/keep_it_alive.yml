@@ -1,0 +1,35 @@
+name: Schedule for GET requests
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-it-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep WebApp alive
+        run: |
+          for i in {1..2}
+          do
+            echo "Execute first GET requests"
+            response=$(curl -sS https://sqm-vs-btc.onrender.com/)
+            echo "Request done"
+            echo "Wait 3 seconds before next request"
+            sleep 10
+            echo "Execute second GET requests"
+            response=$(curl -sS https://sqm-vs-btc.onrender.com/data)
+            echo "Request done"
+            echo "GET Request operation was successful"
+          done
+
+      - name: Delete old scheduled workflow runs
+        uses: MajorScruffy/delete-old-workflow-runs@v0.3.0
+        with:
+          repository: ${{ github.repository }}
+          workflow: ".github/workflows/keep_it_alive.yml"
+          older-than-seconds: 3600
+          event: schedule
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
