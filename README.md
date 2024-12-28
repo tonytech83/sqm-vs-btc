@@ -1,3 +1,6 @@
+[![Build and Deploy](https://github.com/tonytech83/sqm-vs-btc/actions/workflows/main.yml/badge.svg)](https://github.com/tonytech83/sqm-vs-btc/actions/workflows/main.yml)
+[![Schedule for GET requests](https://github.com/tonytech83/sqm-vs-btc/actions/workflows/keep_it_alive.yml/badge.svg)](https://github.com/tonytech83/sqm-vs-btc/actions/workflows/keep_it_alive.yml)
+
 # Square Meter vs. Bitcoin
 
 A Flask-based web application that compares the average price per square meter of real estate in Sofia with the current price of Bitcoin (BTC). The app dynamically fetches real estate prices and Bitcoin prices, calculates their ratio, and provides visual insights using Chart.js.
