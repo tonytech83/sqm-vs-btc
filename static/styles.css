@@ -37,6 +37,7 @@ body {
 
 h1 {
   font-size: 48px;
+  padding-bottom: 5px;
 }
 
 h3 {
@@ -54,11 +55,13 @@ table {
 }
 
 .td-title {
-  padding-right: 20px;
+  padding-right: 40px;
 }
 
 .footer {
   font-size: 14px;
   padding: 10px 0;
   text-align: center;
+  display: flex;
+  justify-content: space-between;
 }
