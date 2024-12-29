@@ -26,8 +26,12 @@
           <td>{{date}}</td>
         </tr>
         <tr>
+          <td class="td-title">SQM</td>
+          <td>{{sqm_price}} €</td>
+        </tr>
+        <tr>
           <td class="td-title">BTC</td>
-          <td>{{current_price}} €</td>
+          <td>{{btc_price}} €</td>
         </tr>
       </table>
 
@@ -85,60 +89,32 @@
         }
       );
 
-      let lastRunTime = parseInt(localStorage.getItem("lastRunTime")) || 0; // Last update time in milliseconds
-      const oneDayMs = 86400000; // One day in milliseconds
-
       function updateCharts() {
-        const currentTime = Date.now();
-        console.log("Current time:", currentTime)
+        fetch("/data")
+          .then((response) => response.json())
+          .then((data) => {
+            // Clear existing chart data
+            priceChart.data.labels = [];
+            priceChart.data.datasets[0].data = [];
 
-        // Check if 1 day (86,400,000 ms) has passed
-        if (currentTime - lastRunTime >= oneDayMs) {
-          fetch("/data")
-            .then((response) => response.json())
-            .then((data) => {
-              let date = data.date;
-
-              priceChart.data.labels.push(date);
-              priceChart.data.datasets[0].data.push(data.ratio);
-              priceChart.update();
-
-              // Update the last run time
-              lastRunTime = currentTime;
-              localStorage.setItem("lastRunTime", lastRunTime); // Save to localStorage
+            // Populate the chart with data from the JSON response
+            data.forEach((entry) => {
+              priceChart.data.labels.push(entry.date);
+              priceChart.data.datasets[0].data.push(entry.ratio);
             });
-        }
-      }
 
-      function updateCountdown() {
-        const currentTime = Date.now();
-        const nextUpdate = lastRunTime + oneDayMs;
-
-        if (nextUpdate <= currentTime) {
-          document.getElementById("nextUpdate").textContent = "Updating soon...";
-        } else {
-          const remainingTime = nextUpdate - currentTime;
-
-          const hours = Math.floor((remainingTime / (1000 * 60 * 60)) % 24);
-          const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
-          const seconds = Math.floor((remainingTime / 1000) % 60);
-
-          document.getElementById(
-            "nextUpdate"
-          ).textContent = `${hours}h ${minutes}m ${seconds}s`;
-        }
+            // Update the chart
+            priceChart.update();
+          });
       }
 
       // Update the chart every minute
-      setInterval(updateCharts, 60000);
-
-      // Update the countdown every second
-      setInterval(updateCountdown, 1000);
+      setInterval(updateCharts, 6000);
     </script>
 
     <div class="footer">
-      <p>© Anton Petrov, All Right Reserved.</p>
-      <p>Next update: <span id="nextUpdate"></span></p>
+      <p>© TonyTech, All Right Reserved.</p>
+      <p></p>
     </div>
   </body>
 </html>

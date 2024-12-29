@@ -3,12 +3,14 @@ from flask import Flask, render_template, jsonify
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+import json
 
 app = Flask(__name__)
 
 # Configure static file serving
 app.static_folder = "static"
 app._static_url_path = "./static"
+
 
 def get_sqm_price_in_eur():
     url = "https://www.imoti.net/bg/sredni-ceni"
@@ -54,27 +56,60 @@ def get_btc_price_in_eur():
     return btc_price_usd * usd_to_eur_rate
 
 
-def get_ratio():
-    apt_price = get_sqm_price_in_eur()
+def write_json_data(file_path, data):
+    with open(file_path, "a") as file:
+        json.dump(data, file)
+        file.write("\n")
+
+
+def get_prices_and_ratio():
+    os.makedirs("data", exist_ok=True)
+    if not os.path.exists("data/data.json"):
+        with open("data/data.json", "w") as f:
+            pass
+
+    data = []
+    if os.path.getsize("data/data.json") > 0:
+        with open("data/data.json", "r") as json_file:
+            data = [json.loads(line) for line in json_file if line.strip()]
+
+    now = datetime.utcnow()
+    if data:
+        last_entry = data[-1]
+        last_entry_time = datetime.strptime(last_entry["date"], "%d %b %Y")
+        if (now - last_entry_time).total_seconds() < 86400:
+            return
+
+    sqm_price = get_sqm_price_in_eur()
     btc_price = get_btc_price_in_eur()
-    ratio = apt_price / btc_price
-    return {
-        "date": datetime.now().strftime("%d %b %Y"),
+    ratio = sqm_price / btc_price
+    dict_data = {
+        "date": now.strftime("%d %b %Y"),
+        "btc_price": btc_price,
+        "sqm_price": sqm_price,
         "ratio": ratio,
     }
+    write_json_data("data/data.json", dict_data)
 
 
 @app.route("/data")
 def data():
-    ratio = get_ratio()
-    return jsonify(ratio)
+    get_prices_and_ratio()
+
+    with open("data/data.json", "r") as json_file:
+        data = [json.loads(line) for line in json_file if line.strip()]
+
+    return jsonify(data)
 
 
 @app.route("/")
 def index():
     date = datetime.now().strftime("%d %b %Y")
-    current_price = f"{get_btc_price_in_eur():.2f}"
-    return render_template("index.html", date=date, current_price=current_price)
+    btc_price = f"{get_btc_price_in_eur():.2f}"
+    sqm_price = f"{get_sqm_price_in_eur():.2f}"
+    return render_template(
+        "index.html", date=date, btc_price=btc_price, sqm_price=sqm_price
+    )
 
 
 if __name__ == "__main__":
