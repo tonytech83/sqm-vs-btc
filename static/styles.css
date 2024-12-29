@@ -22,7 +22,8 @@ body {
   background-color: #2e3440;
   color: #d8dee9;
   font-family: "Roboto", sans-serif;
-  width: 1400px;
+  max-width: 1400px; /* Ensures content doesn't overflow on large screens */
+  width: 100%; /* Makes it responsive */
   margin: auto;
 }
 
@@ -49,7 +50,7 @@ table {
   font-weight: 500;
   font-size: 20px;
   max-width: 80%;
-  align-items: center;
+  text-align: center; /* Center table content */
   margin: auto;
   margin-bottom: 50px;
 }

@@ -42,6 +42,7 @@ let priceChart = new Chart(
               font: { size: 14 },
             },
             grid: { color: "rgba(216, 222, 233, 1.0)" },
+            min: 0,
           },
         },
       },
