@@ -56,30 +56,38 @@ def write_json_data(file_path, data):
 
 
 def get_prices_and_ratio():
-    os.makedirs("data", exist_ok=True)
-    if not os.path.exists("data/data.json"):
-        with open("data/data.json", "w") as f:
-            pass
+    file_path = "data/data.json"
 
-    data = []
-    if os.path.getsize("data/data.json") > 0:
-        with open("data/data.json", "r") as json_file:
-            data = [json.loads(line) for line in json_file if line.strip()]
+    # Ensure file exists
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    if not os.path.exists(file_path):
+        with open(file_path, "w") as f:
+            pass  # Create an empty file
 
-    now = datetime.utcnow()
-    if data:
-        last_entry = data[-1]
-        last_entry_time = datetime.strptime(last_entry["date"], "%d %b %Y")
-        if (now - last_entry_time).total_seconds() < 86400:
-            return
+    # Read existing data
+    existing_data = []
+    if os.path.getsize(file_path) > 0:
+        with open(file_path, "r") as json_file:
+            existing_data = [json.loads(line) for line in json_file if line.strip()]
 
+    # Check if today's data already exists
+    today = datetime.utcnow().strftime("%d %b %Y")
+    if any(entry["date"] == today for entry in existing_data):
+        return
+
+    # Fetch new data
     sqm_price = get_sqm_price_in_eur()
     btc_price = get_btc_price_in_eur()
     ratio = sqm_price / btc_price
-    dict_data = {
-        "date": now.strftime("%d %b %Y"),
+
+    new_entry = {
+        "date": today,
         "btc_price": btc_price,
         "sqm_price": sqm_price,
         "ratio": ratio,
     }
-    write_json_data("data/data.json", dict_data)
+
+    # Append new data to file
+    with open(file_path, "a") as json_file:
+        json.dump(new_entry, json_file)
+        json_file.write("\n")
