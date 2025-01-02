@@ -107,5 +107,8 @@ function updateCharts() {
     });
 }
 
+// Call updateCharts immediately to load data on page load
+updateCharts();
+
 // Update the chart every minute
 setInterval(updateCharts, 60000);
