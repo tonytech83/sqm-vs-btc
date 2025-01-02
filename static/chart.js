@@ -8,24 +8,24 @@ let priceChart = new Chart(
         {
           label: "Ratio sqm price vs. BTC price",
           data: [], // Ratios will go here
-          borderColor: "rgba(247, 147, 26, 1.0)",
-          backgroundColor: "rgba(247, 147, 26, 0.2)",
+          borderColor: "rgba(54, 162, 235, 1.0)",
+          backgroundColor: "rgba(54, 162, 235, 0.2)",
           borderWidth: 2,
           yAxisID: "yRatio", // Bind to left Y-axis
         },
         {
           label: "BTC Price",
           data: [], // BTC prices will go here
-          borderColor: "rgba(54, 162, 235, 1.0)",
-          backgroundColor: "rgba(54, 162, 235, 0.2)",
+          borderColor: "rgba(247, 147, 26, 1.0)",
+          backgroundColor: "rgba(247, 147, 26, 0.2)",
           borderWidth: 2,
           yAxisID: "yPrice", // Bind to right Y-axis
         },
         {
           label: "SQM Price",
           data: [], // SQM prices will go here
-          borderColor: "rgba(75, 192, 192, 1.0)",
-          backgroundColor: "rgba(75, 192, 192, 0.2)",
+          borderColor: "rgba(163, 190, 140, 1.0)",
+          backgroundColor: "rgba(163, 190, 140, 0.2)",
           borderWidth: 2,
           yAxisID: "yPrice", // Bind to right Y-axis
         },
@@ -60,7 +60,7 @@ let priceChart = new Chart(
             font: { size: 18 },
           },
           ticks: {
-            color: "rgba(247, 147, 26, 1.0)",
+            color: "rgba(54, 162, 235, 1.0)",
             font: { size: 14 },
           },
           grid: { color: "rgba(216, 222, 233, 0.5)" },
@@ -74,7 +74,7 @@ let priceChart = new Chart(
             font: { size: 18 },
           },
           ticks: {
-            color: "rgba(54, 162, 235, 1.0)",
+            color: "rgba(247, 147, 26, 1.0)",
             font: { size: 14 },
           },
           grid: { drawOnChartArea: false }, // Don't overlap grids with left Y-axis
