@@ -3,29 +3,45 @@ let priceChart = new Chart(
   {
     type: "line",
     data: {
-      labels: [],
+      labels: [], // Dates will go here
       datasets: [
         {
-          backgroundColor: "rgba(247, 147, 26, 1.0)",
-          label: "Ratio sqm Price vs. BTC Price",
-          data: [],
+          label: "Ratio sqm price vs. BTC price",
+          data: [], // Ratios will go here
           borderColor: "rgba(247, 147, 26, 1.0)",
+          backgroundColor: "rgba(247, 147, 26, 0.2)",
           borderWidth: 2,
-          fill: false,
+          yAxisID: "yRatio", // Bind to left Y-axis
+        },
+        {
+          label: "BTC Price",
+          data: [], // BTC prices will go here
+          borderColor: "rgba(54, 162, 235, 1.0)",
+          backgroundColor: "rgba(54, 162, 235, 0.2)",
+          borderWidth: 2,
+          yAxisID: "yPrice", // Bind to right Y-axis
+        },
+        {
+          label: "SQM Price",
+          data: [], // SQM prices will go here
+          borderColor: "rgba(75, 192, 192, 1.0)",
+          backgroundColor: "rgba(75, 192, 192, 0.2)",
+          borderWidth: 2,
+          yAxisID: "yPrice", // Bind to right Y-axis
         },
       ],
     },
     options: {
       elements: {
         line: {
-          tension: 0.4, // smooth lines
+          tension: 0.4, // Smooth lines
         },
       },
       scales: {
         x: {
           title: {
             display: true,
-            text: "Time",
+            text: "Date",
             color: "#D8DEE9",
             font: { size: 18 },
           },
@@ -33,9 +49,10 @@ let priceChart = new Chart(
             color: "rgba(216, 222, 233, 1.0)",
             font: { size: 14 },
           },
-          grid: { color: "rgba(216, 222, 233, 1.0)" },
+          grid: { color: "rgba(216, 222, 233, 0.5)" },
         },
-        y: {
+        yRatio: {
+          position: "left",
           title: {
             display: true,
             text: "Ratio",
@@ -43,11 +60,24 @@ let priceChart = new Chart(
             font: { size: 18 },
           },
           ticks: {
-            color: "rgba(216, 222, 233, 1.0)",
+            color: "rgba(247, 147, 26, 1.0)",
             font: { size: 14 },
           },
-          grid: { color: "rgba(216, 222, 233, 1.0)" },
-          min: 0,
+          grid: { color: "rgba(216, 222, 233, 0.5)" },
+        },
+        yPrice: {
+          position: "right",
+          title: {
+            display: true,
+            text: "Price (€)",
+            color: "#D8DEE9",
+            font: { size: 18 },
+          },
+          ticks: {
+            color: "rgba(54, 162, 235, 1.0)",
+            font: { size: 14 },
+          },
+          grid: { drawOnChartArea: false }, // Don't overlap grids with left Y-axis
         },
       },
     },
@@ -60,12 +90,16 @@ function updateCharts() {
     .then((data) => {
       // Clear existing chart data
       priceChart.data.labels = [];
-      priceChart.data.datasets[0].data = [];
+      priceChart.data.datasets[0].data = []; // Ratios
+      priceChart.data.datasets[1].data = []; // BTC Prices
+      priceChart.data.datasets[2].data = []; // SQM Prices
 
       // Populate the chart with data from the JSON response
       data.forEach((entry) => {
         priceChart.data.labels.push(entry.date);
         priceChart.data.datasets[0].data.push(entry.ratio);
+        priceChart.data.datasets[1].data.push(entry.btc_price);
+        priceChart.data.datasets[2].data.push(entry.sqm_price);
       });
 
       // Update the chart
@@ -74,4 +108,4 @@ function updateCharts() {
 }
 
 // Update the chart every minute
-setInterval(updateCharts, 6000);
+setInterval(updateCharts, 60000);
