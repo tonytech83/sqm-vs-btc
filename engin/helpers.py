@@ -3,7 +3,6 @@ import json
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from filelock import FileLock
 
 
 def get_sqm_price_in_eur():
@@ -50,59 +49,60 @@ def get_btc_price_in_eur():
     return btc_price_usd * usd_to_eur_rate
 
 
-def write_json_data(file_path, data):
-    with open(file_path, "a") as file:
-        json.dump(data, file)
-        file.write("\n")
+def write_json_data(file_path, new_entry):
+    temp_file = file_path + ".tmp"
+
+    # Append new entry atomically
+    with open(file_path, "r") as f:
+        data = [json.loads(line) for line in f if line.strip()]
+
+    data.append(new_entry)
+
+    # Write to a temporary file first
+    with open(temp_file, "w") as f:
+        for entry in data:
+            json.dump(entry, f)
+            f.write("\n")
+
+    # Replace the original file
+    os.replace(temp_file, file_path)
 
 
 def get_prices_and_ratio():
     file_path = "data/data.json"
-    lock_path = "data/data.lock"
 
     # Ensure the data directory exists
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    # Initialize the lock
-    lock = FileLock(lock_path)
+    # Ensure the file exists
+    if not os.path.exists(file_path):
+        with open(file_path, "w") as f:
+            pass  # Create an empty file
 
-    try:
-        # Acquire the lock before accessing the file
-        with lock:
-            # Ensure the file exists
-            if not os.path.exists(file_path):
-                with open(file_path, "w") as f:
-                    pass  # Create an empty file
+    # Read existing data
+    existing_data = []
+    if os.path.getsize(file_path) > 0:
+        with open(file_path, "r") as json_file:
+            existing_data = [json.loads(line) for line in json_file if line.strip()]
 
-            # Read existing data
-            existing_data = []
-            if os.path.getsize(file_path) > 0:
-                with open(file_path, "r") as json_file:
-                    existing_data = [json.loads(line) for line in json_file if line.strip()]
+    # Check if today's data already exists
+    today = datetime.utcnow().strftime("%d %b %Y")
+    if any(entry["date"] == today for entry in existing_data):
+        print(f"Entry for {today} already exists. Skipping.")
+        return
 
-            # Check if today's data already exists
-            today = datetime.utcnow().strftime("%d %b %Y")
-            if any(entry["date"] == today for entry in existing_data):
-                # print(f"Entry for {today} already exists. Skipping.")
-                return
+    # Fetch new data
+    sqm_price = get_sqm_price_in_eur()
+    btc_price = get_btc_price_in_eur()
+    ratio = sqm_price / btc_price
 
-            # Fetch new data
-            sqm_price = get_sqm_price_in_eur()
-            btc_price = get_btc_price_in_eur()
-            ratio = sqm_price / btc_price
+    new_entry = {
+        "date": today,
+        "btc_price": btc_price,
+        "sqm_price": sqm_price,
+        "ratio": ratio,
+    }
 
-            new_entry = {
-                "date": today,
-                "btc_price": btc_price,
-                "sqm_price": sqm_price,
-                "ratio": ratio,
-            }
-
-            # Append new data to the file
-            with open(file_path, "a") as json_file:
-                json.dump(new_entry, json_file)
-                json_file.write("\n")
-
-            print(f"Added new entry for {today}: {new_entry}")
-    except Exception as e:
-        print(f"Error while working with the lock: {e}")
+    # Append new data to the file atomically
+    write_json_data(file_path, new_entry)
+    print(f"Added new entry for {today}: {new_entry}")
