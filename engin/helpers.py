@@ -5,7 +5,18 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 
-def get_sqm_price_in_eur():
+def get_sqm_price_in_eur() -> float:
+    """
+    Scrapes the average square meter price in EUR from imoti.net for properties in Sofia.
+    
+    Returns:
+        float: The average price per square meter in EUR.
+        Returns 0 if no valid prices are found.
+    
+    Note:
+        Scrapes data from https://www.imoti.net/bg/sredni-ceni
+        Processes only numeric values, skipping any non-numeric entries.
+    """
     url = "https://www.imoti.net/bg/sredni-ceni"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -33,7 +44,17 @@ def get_sqm_price_in_eur():
     return average_price
 
 
-def get_btc_price_in_eur():
+def get_btc_price_in_eur() -> float:
+    """
+    Fetches the current Bitcoin price in EUR using CoinDesk API and currency conversion.
+    
+    Returns:
+        float: Current Bitcoin price in EUR.
+    
+    Note:
+        Uses CoinDesk API for BTC/USD price
+        Uses exchangerate-api.com for USD/EUR conversion
+    """
     btc_url = "https://api.coindesk.com/v1/bpi/currentprice/BTC.json"
     exchange_rate_url = "https://api.exchangerate-api.com/v4/latest/USD"
 
@@ -49,7 +70,18 @@ def get_btc_price_in_eur():
     return btc_price_usd * usd_to_eur_rate
 
 
-def write_json_data(file_path, new_entry):
+def write_json_data(file_path: str, new_entry: dict) -> None:
+    """
+    Atomically writes a new entry to a JSON file, maintaining one entry per line.
+    
+    Args:
+        file_path (str): Path to the JSON file
+        new_entry (dict): New data entry to append to the file
+    
+    Note:
+        Uses a temporary file for atomic writing
+        Maintains file format with one JSON object per line
+    """
     temp_file = file_path + ".tmp"
 
     # Append new entry atomically
@@ -68,7 +100,27 @@ def write_json_data(file_path, new_entry):
     os.replace(temp_file, file_path)
 
 
-def get_prices_and_ratio():
+def get_prices_and_ratio() -> None:
+    """
+    Fetches current BTC and square meter prices, calculates their ratio, and stores the data.
+    
+    The function:
+    - Creates data directory and file if they don't exist
+    - Checks for existing entry for current date to avoid duplicates
+    - Fetches current BTC and square meter prices
+    - Calculates the ratio between them
+    - Stores the data in JSON format
+    
+    Data stored includes:
+    - date: Current UTC date
+    - btc_price: Bitcoin price in EUR
+    - sqm_price: Square meter price in EUR
+    - ratio: SQM price / BTC price
+    
+    Note:
+        Stores data in 'data/data.json'
+        Skips execution if an entry for current date exists
+    """
     file_path = "data/data.json"
 
     # Ensure the data directory exists
