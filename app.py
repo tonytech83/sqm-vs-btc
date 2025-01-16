@@ -3,7 +3,12 @@ from flask import Flask, render_template, jsonify
 from functools import lru_cache
 from datetime import datetime
 
-from engin.helpers import get_sqm_price_in_eur, get_btc_price_in_eur, get_prices_and_ratio, prepare_json
+from engin.helpers import prepare_json
+from engin.insert_db import (
+    get_sqm_price_in_eur,
+    get_btc_price_in_eur,
+    get_prices_and_ratio,
+)
 
 
 app = Flask(
@@ -17,6 +22,7 @@ current_btc_price = None
 current_sqm_price = None
 data_preloaded = False
 
+
 @app.before_request
 def preload_data():
     global current_btc_price, current_sqm_price, data_preloaded
@@ -25,8 +31,9 @@ def preload_data():
         current_sqm_price = f"{get_sqm_price_in_eur():.2f}"
         data_preloaded = True
 
+
 # Cache results for /data
-@lru_cache(maxsize=1)  
+@lru_cache(maxsize=1)
 def cached_data():
     return prepare_json()
 
@@ -41,7 +48,10 @@ def data():
 def index():
     date = datetime.now().strftime("%d %b %Y")
     return render_template(
-        "index.html", date=date, btc_price=current_btc_price, sqm_price=current_sqm_price
+        "index.html",
+        date=date,
+        btc_price=current_btc_price,
+        sqm_price=current_sqm_price,
     )
 
 
