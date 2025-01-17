@@ -4,7 +4,7 @@ from functools import lru_cache
 from datetime import datetime
 
 from engin.helpers import prepare_json
-from engin.insert_db import (
+from engin.insert_into_db import (
     get_sqm_price_in_eur,
     get_btc_price_in_eur,
     get_prices_and_ratio,
