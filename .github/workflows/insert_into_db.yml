@@ -2,7 +2,7 @@ name: Insert into database
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * *' # Run once per day at midnight UTC
   workflow_dispatch:
 
 jobs:
@@ -10,17 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v4
-
-      - name: Use Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: pip install --upgrade pip && pip install -r requirements.txt
-
-      - name: Insert record into Database
-        run: python engin/insert_into_db.py
+      - name: Trigger database update via API
+        run: |
+          curl -X GET https://sqm-vs-btc.onrender.com/update-db

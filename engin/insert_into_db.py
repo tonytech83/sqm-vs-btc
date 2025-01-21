@@ -116,6 +116,9 @@ def get_prices_and_ratio() -> None:
     """,
         (today, btc_price, sqm_price, ratio),
     )
+    print("============================")
+    print(f"Added new entry for {today}")
+    print("============================")
 
     # Commit changes and close the connection
     conn.commit()

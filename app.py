@@ -40,8 +40,14 @@ def cached_data():
 
 @app.route("/data")
 def data():
-    get_prices_and_ratio()
+    # get_prices_and_ratio()
     return jsonify(cached_data())
+
+
+@app.route("/update-db")
+def update_db():
+    get_prices_and_ratio()
+    return jsonify({"status": "Database updated"})
 
 
 @app.route("/")
