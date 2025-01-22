@@ -2,11 +2,10 @@ name: Build and Deploy
 
 on:
   pull_request:
-    branches: ["main"]    
+    branches: ["main"]
   schedule:
-    - cron: '15 0 * * *'
+    - cron: "15 0 * * *"
   workflow_dispatch:
-
 
 jobs:
   build:
@@ -36,6 +35,26 @@ jobs:
       - name: Check Data Endpoint
         run: |
           curl -f http://127.0.0.1:5000/data || (echo "Data endpoint failed" && exit 1)
+
+  ui_test:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Use Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip" # caching pip dependencies
+
+      - name: Install dependencies
+        run: pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Perform tests
+        run: pytest
 
   deploy:
     needs: build

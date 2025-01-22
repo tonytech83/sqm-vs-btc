@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import sqlite3 as db
+import logging
 
 
 def get_sqm_price_in_eur() -> float:
@@ -72,56 +73,50 @@ def get_btc_price_in_eur() -> float:
 
 
 def get_prices_and_ratio() -> None:
-    # Connect to the SQLite database (or create it if it doesn't exist)
-    conn = db.connect("sql_vs_btc.db")
-    cursor = conn.cursor()
+    try:
+        conn = db.connect("sql_vs_btc.db")
+        cursor = conn.cursor()
 
-    # Create the table
-    cursor.execute(
-        """
-    CREATE TABLE IF NOT EXISTS data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT NOT NULL UNIQUE,
-        btc_price REAL NOT NULL,
-        sqm_price REAL NOT NULL,
-        ratio REAL NOT NULL
-    )
-    """
-    )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL UNIQUE,
+                btc_price REAL NOT NULL,
+                sqm_price REAL NOT NULL,
+                ratio REAL NOT NULL
+            )
+            """
+        )
 
-    # Check if today's data already exists
-    today = datetime.now().strftime("%d %b %Y")
-    cursor.execute("SELECT 1 FROM data WHERE date = ?", (today,))
-    if cursor.fetchone():
-        print(f"Entry for {today} already exists. Skipping.")
+        today = datetime.now().strftime("%d %b %Y")
+        cursor.execute("SELECT 1 FROM data WHERE date = ?", (today,))
+        if cursor.fetchone():
+            logging.info(f"Entry for {today} already exists. Skipping.")
+            return
+
+        sqm_price = get_sqm_price_in_eur()
+        btc_price = get_btc_price_in_eur()
+
+        if sqm_price is None or btc_price is None:
+            logging.error("Failed to fetch data. Skipping database insertion.")
+            return
+
+        ratio = sqm_price / btc_price
+
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO data (date, btc_price, sqm_price, ratio)
+            VALUES(?, ?, ?, ?)
+            """,
+            (today, btc_price, sqm_price, ratio),
+        )
+        logging.info(f"Added new entry for {today}")
+
+        conn.commit()
+    except db.Error as e:
+        logging.error(f"Database error: {e}")
+    finally:
         conn.close()
-        return
-
-    # Fetch new data
-    sqm_price = get_sqm_price_in_eur()
-    btc_price = get_btc_price_in_eur()
-
-    if sqm_price is None or btc_price is None:
-        print("Failed to fetch data. Skipping database insertion.")
-        conn.close()
-        return
-
-    ratio = sqm_price / btc_price
-
-    # Add new record into database
-    cursor.execute(
-        """
-    INSERT OR IGNORE INTO data (date, btc_price, sqm_price, ratio)
-    VALUES(?, ?, ?, ?)
-    """,
-        (today, btc_price, sqm_price, ratio),
-    )
-    print("============================")
-    print(f"Added new entry for {today}")
-    print("============================")
-
-    # Commit changes and close the connection
-    conn.commit()
-    conn.close()
 
 get_prices_and_ratio()

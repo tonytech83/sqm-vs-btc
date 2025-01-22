@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, g
 from functools import lru_cache
 from datetime import datetime
 
@@ -11,57 +11,50 @@ from engin.insert_into_db import (
 )
 
 
-app = Flask(
-    __name__,
-    static_url_path="/static",
-    static_folder="static",
-    template_folder="templates",
-)
-
-current_btc_price = None
-current_sqm_price = None
-data_preloaded = False
-
-
-@app.before_request
-def preload_data():
-    global current_btc_price, current_sqm_price, data_preloaded
-    if not data_preloaded:
-        current_btc_price = f"{get_btc_price_in_eur():.2f}"
-        current_sqm_price = f"{get_sqm_price_in_eur():.2f}"
-        data_preloaded = True
-
-
-# Cache results for /data
 @lru_cache(maxsize=1)
 def cached_data():
     return prepare_json()
 
 
-@app.route("/data")
-def data():
-    # get_prices_and_ratio()
-    return jsonify(cached_data())
-
-
-@app.route("/update-db")
-def update_db():
-    get_prices_and_ratio()
-    return jsonify({"status": "Database updated"})
-
-
-@app.route("/")
-def index():
-    date = datetime.now().strftime("%d %b %Y")
-    return render_template(
-        "index.html",
-        date=date,
-        btc_price=current_btc_price,
-        sqm_price=current_sqm_price,
+def create_app() -> Flask:
+    app = Flask(
+        __name__,
+        static_url_path="/static",
+        static_folder="static",
+        template_folder="templates",
     )
+
+    @app.before_request
+    def preload_data():
+        if not hasattr(g, "data_preloaded"):
+            g.current_btc_price = f"{get_btc_price_in_eur():.2f}"
+            g.current_sqm_price = f"{get_sqm_price_in_eur():.2f}"
+            g.data_preloaded = True
+
+    @app.route("/data")
+    def data():
+        return jsonify(cached_data())
+
+    @app.route("/update-db")
+    def update_db():
+        get_prices_and_ratio()
+        return jsonify({"status": "Database updated"})
+
+    @app.route("/")
+    def index():
+        date = datetime.now().strftime("%d %b %Y")
+        return render_template(
+            "index.html",
+            date=date,
+            btc_price=g.current_btc_price,
+            sqm_price=g.current_sqm_price,
+        )
+
+    return app
 
 
 if __name__ == "__main__":
+    app = create_app()
     port = int(os.environ.get("PORT", 5000))
-    print(f"Starting server on port {port}")
+    app.logger.info(f"Starting server on port {port}")
     app.run(host="0.0.0.0", port=port)
