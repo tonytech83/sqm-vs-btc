@@ -1,8 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-import sqlite3 as db
+import psycopg2 as db
 import logging
+import os
 
 
 def get_sqm_price_in_eur() -> float:
@@ -73,14 +74,21 @@ def get_btc_price_in_eur() -> float:
 
 
 def get_prices_and_ratio() -> None:
+    conn = None  # Initialize conn to None
     try:
-        conn = db.connect("sql_vs_btc.db")
+        conn = db.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT")
+        )
         cursor = conn.cursor()
 
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS data (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 date TEXT NOT NULL UNIQUE,
                 btc_price REAL NOT NULL,
                 sqm_price REAL NOT NULL,
@@ -90,7 +98,7 @@ def get_prices_and_ratio() -> None:
         )
 
         today = datetime.now().strftime("%d %b %Y")
-        cursor.execute("SELECT 1 FROM data WHERE date = ?", (today,))
+        cursor.execute("SELECT 1 FROM data WHERE date = %s", (today,))
         if cursor.fetchone():
             logging.info(f"Entry for {today} already exists. Skipping.")
             return
@@ -106,8 +114,9 @@ def get_prices_and_ratio() -> None:
 
         cursor.execute(
             """
-            INSERT OR IGNORE INTO data (date, btc_price, sqm_price, ratio)
-            VALUES(?, ?, ?, ?)
+            INSERT INTO data (date, btc_price, sqm_price, ratio)
+            VALUES(%s, %s, %s, %s)
+            ON CONFLICT (date) DO NOTHING
             """,
             (today, btc_price, sqm_price, ratio),
         )
@@ -117,6 +126,7 @@ def get_prices_and_ratio() -> None:
     except db.Error as e:
         logging.error(f"Database error: {e}")
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 get_prices_and_ratio()
