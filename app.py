@@ -1,60 +1,32 @@
 import os
-from flask import Flask, render_template, jsonify, g
-from functools import lru_cache
-from datetime import datetime
+from flask import Flask, g
 
-from engin.helpers import prepare_json
-from engin.insert_into_db import (
-    get_sqm_price_in_eur,
-    get_btc_price_in_eur,
-    get_prices_and_ratio,
+from WebApp.helpers import get_sqm_price_in_eur, get_btc_price_in_eur
+from WebApp.views import IndexView, DataView, UpdateDBView
+
+
+# Initialise Flask App
+app = Flask(
+    __name__,
+    static_url_path="/static",
+    static_folder="static",
+    template_folder="templates",
 )
 
 
-@lru_cache(maxsize=1)
-def cached_data():
-    return prepare_json()
+@app.before_request
+def preload_data():
+    if not hasattr(g, "data_preloaded"):
+        g.current_btc_price = f"{get_btc_price_in_eur():.2f}"
+        g.current_sqm_price = f"{get_sqm_price_in_eur():.2f}"
+        g.data_preloaded = True
 
 
-def create_app() -> Flask:
-    app = Flask(
-        __name__,
-        static_url_path="/static",
-        static_folder="static",
-        template_folder="templates",
-    )
+# urlpatterns
+app.add_url_rule("/", view_func=IndexView.as_view("index_view", "index.html"))
+app.add_url_rule("/data", view_func=DataView.as_view("data_view"))
+app.add_url_rule("/update-db", view_func=UpdateDBView.as_view("update_db_view"))
 
-    @app.before_request
-    def preload_data():
-        if not hasattr(g, "data_preloaded"):
-            g.current_btc_price = f"{get_btc_price_in_eur():.2f}"
-            g.current_sqm_price = f"{get_sqm_price_in_eur():.2f}"
-            g.data_preloaded = True
-
-    @app.route("/data")
-    def data():
-        return jsonify(cached_data())
-
-    @app.route("/update-db")
-    def update_db():
-        get_prices_and_ratio()
-        return jsonify({"status": "Database updated"})
-
-    @app.route("/")
-    def index():
-        date = datetime.now().strftime("%d %b %Y")
-        return render_template(
-            "index.html",
-            date=date,
-            btc_price=g.current_btc_price,
-            sqm_price=g.current_sqm_price,
-        )
-
-    return app
-
-
-# Create an app instance for Gunicorn
-app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
