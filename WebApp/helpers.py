@@ -1,9 +1,42 @@
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime
-import psycopg2 as db
 import logging
 import os
+from datetime import datetime
+from typing import List, Dict
+
+import psycopg2 as db
+from psycopg2.extras import RealDictCursor
+import requests
+from bs4 import BeautifulSoup
+
+
+def prepare_json() -> List[Dict]:
+    # Initialize conn to None
+    conn = None
+    try:
+        conn = db.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT"),
+        )
+        # Use RealDictCursor for dict rows
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        cursor.execute("SELECT * FROM data")
+        # Fetch rows as dictionaries
+        db_entries = cursor.fetchall()
+
+        # Debugging: Log the number of entries fetched
+        logging.info(f"Fetched {len(db_entries)} entries from the database.")
+
+        return db_entries
+    except db.Error as e:
+        logging.error(f"Database error: {e}")
+        return []
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def get_sqm_price_in_eur() -> float:
@@ -81,7 +114,7 @@ def get_prices_and_ratio() -> None:
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
             host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT")
+            port=os.getenv("DB_PORT"),
         )
         cursor = conn.cursor()
 
@@ -128,5 +161,6 @@ def get_prices_and_ratio() -> None:
     finally:
         if conn is not None:
             conn.close()
+
 
 get_prices_and_ratio()
