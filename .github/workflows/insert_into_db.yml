@@ -18,7 +18,7 @@ jobs:
         uses: MajorScruffy/delete-old-workflow-runs@v0.3.0
         with:
           repository: ${{ github.repository }}
-          workflow: ".github/workflows/keep_it_alive.yml"
+          workflow: ".github/workflows/insert_into_db.yml"
           older-than-seconds: 3600
           event: schedule
         env:
