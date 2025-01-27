@@ -90,9 +90,9 @@ def get_prices_and_ratio() -> None:
             CREATE TABLE IF NOT EXISTS data (
                 id SERIAL PRIMARY KEY,
                 date TEXT NOT NULL UNIQUE,
-                btc_price REAL NOT NULL,
-                sqm_price REAL NOT NULL,
-                ratio REAL NOT NULL
+                btc_price NUMERIC(18, 8) NOT NULL,
+                sqm_price NUMERIC(18, 8) NOT NULL,
+                ratio NUMERIC(20, 18) NOT NULL
             )
             """
         )
