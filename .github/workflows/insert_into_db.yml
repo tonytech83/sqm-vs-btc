@@ -19,7 +19,7 @@ jobs:
         with:
           repository: ${{ github.repository }}
           workflow: ".github/workflows/insert_into_db.yml"
-          older-than-seconds: 3600
+          older-than-seconds: 259200 # 3 days
           event: schedule
         env:
           GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
