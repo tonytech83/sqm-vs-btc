@@ -10,6 +10,17 @@ from bs4 import BeautifulSoup
 
 
 def prepare_json() -> List[Dict]:
+    """
+    Retrieves all entries from the database and returns them as a list of dictionaries.
+
+    Returns:
+        List[Dict]: A list of database entries as dictionaries.
+        Returns an empty list if there's an error.
+
+    Note:
+        Uses RealDictCursor for dictionary-style results.
+        Automatically closes database connection in finally block.
+    """
     # Initialize conn to None
     conn = None
     try:
@@ -44,39 +55,42 @@ def get_sqm_price_in_eur() -> float:
     Scrapes the average square meter price in EUR from imoti.net for properties in Sofia.
 
     Returns:
-        float: The average price per square meter in EUR.
-        Returns 0 if no valid prices are found.
+        float | None: The average price per square meter in EUR.
+        Returns None if scraping fails or no valid prices are found.
+
+    Raises:
+        requests.exceptions.RequestException: If the HTTP request fails.
 
     Note:
         Scrapes data from https://www.imoti.net/bg/sredni-ceni
         Processes only numeric values, skipping any non-numeric entries.
+        Uses a 30-second timeout for the HTTP request.
     """
     try:
         url = "https://www.imoti.net/bg/sredni-ceni"
         response = requests.get(url, timeout=30)
-        soup = BeautifulSoup(response.content, "html.parser")
-        price_per_sqm_rows = soup.find("tbody").find_all("tr")
-
-        total_price = 0
-        count = 0
-
-        for row in price_per_sqm_rows:
-            cells = row.find_all("td")
-            if len(cells) > 1:
-                price_cell = cells[1].get_text(strip=True).replace(" ", "")
-                try:
-                    price = float(price_cell)
-                    total_price += price
-                    count += 1
-                except ValueError:
-                    continue
-
-        if count > 0:
-            return total_price / count
-        return None
-    except Exception as e:
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
         print(f"Error fetching SQM price: {e}")
         return None
+
+    soup = BeautifulSoup(response.content, "html.parser")
+    price_per_sqm_rows = soup.find("tbody").find_all("tr")
+
+    total_price = 0
+    count = 0
+    for row in price_per_sqm_rows:
+        cells = row.find_all("td")
+        if len(cells) > 1:
+            price_cell = cells[1].get_text(strip=True).replace(" ", "")
+            try:
+                price = float(price_cell)
+                total_price += price
+                count += 1
+            except ValueError:
+                continue
+
+    return total_price / count if count > 0 else None
 
 
 def get_btc_price_in_eur() -> float:
@@ -84,11 +98,18 @@ def get_btc_price_in_eur() -> float:
     Fetches the current Bitcoin price in EUR using CoinDesk API and currency conversion.
 
     Returns:
-        float: Current Bitcoin price in EUR.
+        float | None: Current Bitcoin price in EUR.
+        Returns None if either API request fails.
+
+    Raises:
+        requests.exceptions.RequestException: If either HTTP request fails.
+        ValueError: If price parsing fails.
+        KeyError: If API response doesn't contain expected data.
 
     Note:
         Uses CoinDesk API for BTC/USD price
         Uses exchangerate-api.com for USD/EUR conversion
+        Uses timeouts of 30s for BTC price and 5s for exchange rate
     """
     try:
         btc_url = "https://api.coindesk.com/v1/bpi/currentprice/BTC.json"
@@ -107,6 +128,23 @@ def get_btc_price_in_eur() -> float:
 
 
 def get_prices_and_ratio() -> None:
+    """
+    Fetches current BTC and square meter prices, calculates their ratio,
+    and stores the data in the database.
+
+    The function:
+    1. Creates the data table if it doesn't exist
+    2. Checks for existing entry for today
+    3. Fetches current prices
+    4. Calculates the ratio
+    5. Stores the new entry
+
+    Note:
+        - Skips insertion if an entry for today already exists
+        - Uses ON CONFLICT DO NOTHING for date uniqueness
+        - Automatically closes database connection in finally block
+        - Logs all significant events and errors
+    """
     conn = None  # Initialize conn to None
     try:
         conn = db.connect(
