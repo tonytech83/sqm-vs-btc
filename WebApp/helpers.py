@@ -92,39 +92,47 @@ def get_sqm_price_in_eur() -> float:
 
     return total_price / count if count > 0 else None
 
+def get_btc_price_coingecko():
+    url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data["bitcoin"]["eur"]
+    except requests.RequestException as e:
+        logging.error(f"Error fetching BTC price from CoinGecko: {e}")
+        return None
+
+def get_btc_price_binance():
+    url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCEUR"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return float(data["price"])
+    except requests.RequestException as e:
+        logging.error(f"Error fetching BTC price from Binance: {e}")
+        return None
+
+def get_btc_price_kraken():
+    url = "https://api.kraken.com/0/public/Ticker?pair=XBTEUR"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return float(data["result"]["XXBTZEUR"]["c"][0])
+    except requests.RequestException as e:
+        logging.error(f"Error fetching BTC price from Kraken: {e}")
+        return None
 
 def get_btc_price_in_eur() -> float:
-    """
-    Fetches the current Bitcoin price in EUR using CoinDesk API and currency conversion.
-
-    Returns:
-        float | None: Current Bitcoin price in EUR.
-        Returns None if either API request fails.
-
-    Raises:
-        requests.exceptions.RequestException: If either HTTP request fails.
-        ValueError: If price parsing fails.
-        KeyError: If API response doesn't contain expected data.
-
-    Note:
-        Uses CoinDesk API for BTC/USD price
-        Uses exchangerate-api.com for USD/EUR conversion
-        Uses timeouts of 30s for BTC price and 5s for exchange rate
-    """
-    try:
-        btc_url = "https://api.coindesk.com/v1/bpi/currentprice/BTC.json"
-        exchange_rate_url = "https://api.exchangerate-api.com/v4/latest/USD"
-
-        btc_response = requests.get(btc_url, timeout=30).json()
-        btc_price_usd = float(btc_response["bpi"]["USD"]["rate"].replace(",", ""))
-
-        exchange_rate_response = requests.get(exchange_rate_url, timeout=5).json()
-        usd_to_eur_rate = exchange_rate_response["rates"]["EUR"]
-
-        return btc_price_usd * usd_to_eur_rate
-    except Exception as e:
-        print(f"Error fetching BTC price: {e}")
-        return None
+    for source in [get_btc_price_coingecko, get_btc_price_binance, get_btc_price_kraken]:
+        price = source()
+        if price:
+            logging.info(f"BTC Price from {source.__name__}: {price} EUR")
+            return price
+    logging.error("Failed to fetch BTC price from all sources.")
+    return None
 
 
 def get_prices_and_ratio() -> None:
