@@ -27,11 +27,11 @@
         </tr>
         <tr>
           <td class="td-title">SQM</td>
-          <td>{{sqm_price}} €</td>
+          <td>{{sqm_price if sqm price else 'Unavailable'}} €</td>
         </tr>
         <tr>
           <td class="td-title">BTC</td>
-          <td>{{btc_price}} €</td>
+          <td>{{ btc_price if btc_price else 'Unavailable' }} €</td>
         </tr>
         <tr>
           <td class="td-title">Ratio</td>
