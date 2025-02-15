@@ -27,8 +27,8 @@ class IndexView(View):
             return render_template(
                 self.template,
                 date=latest_data['date'],
-                btc_price=latest_data['btc_price'],
-                sqm_price=latest_data['sqm_price'],
+                btc_price=f"{float(latest_data['btc_price']):.2f}",
+                sqm_price=f"{float(latest_data['sqm_price']):.2f}",
             )
         return render_template(
             self.template,
