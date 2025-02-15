@@ -49,6 +49,36 @@ def prepare_json() -> List[Dict]:
         if conn is not None:
             conn.close()
 
+def get_latest_prices() -> Dict:
+    """
+    Retrieves the latest entry from the database.
+
+    Returns:
+        Dict: The latest database entry containing btc_price and sqm_price.
+        Returns None if there's an error or no entries exist.
+    """
+    conn = None
+    try:
+        conn = db.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT"),
+        )
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("SELECT * FROM data ORDER BY id DESC LIMIT 1")
+        latest_entry = cursor.fetchone()
+        
+        return latest_entry
+    except db.Error as e:
+        logging.error(f"Database error: {e}")
+        return None
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 def get_sqm_price_in_eur() -> float:
     """
