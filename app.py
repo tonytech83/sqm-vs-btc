@@ -17,8 +17,20 @@ app = Flask(
 @app.before_request
 def preload_data():
     if not hasattr(g, "data_preloaded"):
-        g.current_btc_price = f"{get_btc_price_in_eur():.2f}"
-        g.current_sqm_price = f"{get_sqm_price_in_eur():.2f}"
+        try:
+            btc_price = get_btc_price_in_eur()
+            g.current_btc_price = f"{btc_price:.2f}" if btc_price is not None else "N/A"
+        except Exception as e:
+            app.logger.error(f"Failed to fetch BTC price: {str(e)}")
+            g.current_btc_price = "N/A"
+
+        try:
+            sqm_price = get_sqm_price_in_eur()
+            g.current_sqm_price = f"{sqm_price:.2f}" if sqm_price is not None else "N/A"
+        except Exception as e:
+            app.logger.error(f"Failed to fetch SQM price: {str(e)}")
+            g.current_sqm_price = "N/A"
+
         g.data_preloaded = True
 
 

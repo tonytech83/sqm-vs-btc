@@ -35,15 +35,15 @@ sqm-vs-btc/
 ├── README.md           # Project documentation
 ├── requirements.txt    # Python dependencies
 ├── static              # Static files (CSS, JS, etc.)
-│   ├── css
-│   │   └── styles.css
-│   └── js
-│       └── chart.js
+│   ├── css
+│   │   └── styles.css
+│   └── js
+│       └── chart.js
 ├── templates
-│   └── index.html      # HTML template for the web interface
+│   └── index.html      # HTML template for the web interface
 ├── tests
-│   ├── __init__.py
-│   └── test_app.py     # UI unit tests
+│   ├── __init__.py
+│   └── test_app.py     # UI unit tests
 └── WebApp
     ├── helpers.py      # Helper functions for data fetching and database
     └── views.py        # Views
