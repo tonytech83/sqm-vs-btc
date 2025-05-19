@@ -83,44 +83,51 @@ def get_latest_prices() -> Dict:
 def get_sqm_price_in_eur() -> float:
     """
     Scrapes the average square meter price in EUR from imoti.net for properties in Sofia.
-
-    Returns:
-        float | None: The average price per square meter in EUR.
-        Returns None if scraping fails or no valid prices are found.
-
-    Raises:
-        requests.exceptions.RequestException: If the HTTP request fails.
-
-    Note:
-        Scrapes data from https://www.imoti.net/bg/sredni-ceni
-        Processes only numeric values, skipping any non-numeric entries.
-        Uses a 30-second timeout for the HTTP request.
+    Uses a list of proxies and tries each one until successful.
     """
-    try:
-        url = "https://www.imoti.net/bg/sredni-ceni"
-        response = requests.get(url, timeout=60)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching SQM price: {e}")
-        return None
+    proxies_list = [
+        {'http': 'http://45.58.252.244:3128', 'https': 'https://45.58.252.244:3128'},
+        {'http': 'http://157.97.105.191:3128', 'https': 'https://157.97.105.191:3128'},
+        {'http': 'http://209.126.4.70:3128', 'https': 'https://209.126.4.70:3128'},
+        {'http': 'http://168.228.44.66:3128', 'https': 'https://168.228.44.66:3128'},
+        {'http': 'http://159.89.239.166:3128', 'https': 'https://159.89.239.166:3128'},
+        {'http': 'http://63.143.57.119:3128', 'https': 'https://63.143.57.119:3128'},
+        {'http': 'http://152.26.229.52:3128', 'https': 'https://152.26.229.52:3128'},
+    ]
 
-    soup = BeautifulSoup(response.content, "html.parser")
-    price_per_sqm_rows = soup.find("tbody").find_all("tr")
+    url = "https://www.imoti.net/bg/sredni-ceni"
+    
+    for proxy in proxies_list:
+        try:
+            logging.info(f"Trying proxy: {proxy['http']}")
+            response = requests.get(url, timeout=60, proxies=proxy)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, "html.parser")
+            price_per_sqm_rows = soup.find("tbody").find_all("tr")
 
-    total_price = 0
-    count = 0
-    for row in price_per_sqm_rows:
-        cells = row.find_all("td")
-        if len(cells) > 1:
-            price_cell = cells[1].get_text(strip=True).replace(" ", "")
-            try:
-                price = float(price_cell)
-                total_price += price
-                count += 1
-            except ValueError:
-                continue
+            total_price = 0
+            count = 0
+            for row in price_per_sqm_rows:
+                cells = row.find_all("td")
+                if len(cells) > 1:
+                    price_cell = cells[1].get_text(strip=True).replace(" ", "")
+                    try:
+                        price = float(price_cell)
+                        total_price += price
+                        count += 1
+                    except ValueError:
+                        continue
 
-    return total_price / count if count > 0 else None
+            if count > 0:
+                return total_price / count
+                
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error with proxy {proxy['http']}: {e}")
+            continue
+    
+    logging.error("All proxies failed to fetch SQM price")
+    return None
 
 def get_btc_price_coingecko():
     url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur"
