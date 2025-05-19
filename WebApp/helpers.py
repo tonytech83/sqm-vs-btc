@@ -98,7 +98,7 @@ def get_sqm_price_in_eur() -> float:
     """
     try:
         url = "https://www.imoti.net/bg/sredni-ceni"
-        response = requests.get(url, timeout=30)
+        response = requests.get(url, timeout=60)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Error fetching SQM price: {e}")
