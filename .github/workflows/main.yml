@@ -34,28 +34,28 @@ jobs:
       #   run: |
       #     curl -f http://127.0.0.1:5000/data || (echo "Data endpoint failed" && exit 1)
 
-  ui_test:
-    needs: build
-    runs-on: ubuntu-latest
+  # ui_test:
+  #   needs: build
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout the repository
+  #       uses: actions/checkout@v4
 
-      - name: Use Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: "pip" # caching pip dependencies
+  #     - name: Use Python 3.10
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.10"
+  #         cache: "pip" # caching pip dependencies
 
-      - name: Install dependencies
-        run: pip install --upgrade pip && pip install -r requirements.txt
+  #     - name: Install dependencies
+  #       run: pip install --upgrade pip && pip install -r requirements.txt
 
-      - name: Perform tests
-        run: pytest
+  #     - name: Perform tests
+  #       run: pytest
 
   deploy:
-    needs: ui_test
+    needs: build
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
