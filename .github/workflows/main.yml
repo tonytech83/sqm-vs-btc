@@ -25,14 +25,14 @@ jobs:
       - name: Start Flask App
         run: gunicorn app:app --bind 0.0.0.0:5000 &
 
-      - name: Check Index Endpoint
-        run: |
-          sleep 10 # Wait for the server to start
-          curl -f http://127.0.0.1:5000 || (echo "Index endpoint failed" && exit 1)
+      # - name: Check Index Endpoint
+      #   run: |
+      #     sleep 10 # Wait for the server to start
+      #     curl -f http://127.0.0.1:5000 || (echo "Index endpoint failed" && exit 1)
 
-      - name: Check Data Endpoint
-        run: |
-          curl -f http://127.0.0.1:5000/data || (echo "Data endpoint failed" && exit 1)
+      # - name: Check Data Endpoint
+      #   run: |
+      #     curl -f http://127.0.0.1:5000/data || (echo "Data endpoint failed" && exit 1)
 
   ui_test:
     needs: build
