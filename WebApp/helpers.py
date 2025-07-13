@@ -101,55 +101,35 @@ def fetch_proxies_from_api() -> list:
 
 def get_sqm_price_in_eur() -> float:
     url = "https://www.imoti.net/bg/sredni-ceni"
-    proxies = fetch_proxies_from_api()
-    random.shuffle(proxies)  # Shuffle to randomize attempts
 
-    for proxy in proxies:
-        try:
-            print(f"Trying proxy: {proxy}")
-            response = requests.get(
-                url,
-                timeout=60,
-                proxies={"http": proxy, "https": proxy},
-                headers={"User-Agent": "Mozilla/5.0"}
-            )
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, "html.parser")
-            price_per_sqm_rows = soup.find("tbody").find_all("tr")
-
-            total_price = 0
-            count = 0
-            for row in price_per_sqm_rows:
-                cells = row.find_all("td")
-                if len(cells) > 1:
-                    price_cell = cells[1].get_text(strip=True).replace(" ", "")
-                    try:
-                        price = float(price_cell)
-                        total_price += price
-                        count += 1
-                    except ValueError:
-                        continue
-
-            if count > 0:
-                return total_price / count
-            else:
-                return None
-        except Exception as e:
-            print(f"Proxy {proxy} failed: {e}")
-            time.sleep(2)  # Wait before trying next proxy
-
-    print("All proxies failed or site is unreachable.")
-    return None
-
-def get_btc_price_coingecko():
-    url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur"
     try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return data["bitcoin"]["eur"]
-    except requests.RequestException as e:
-        logging.error(f"Error fetching BTC price from CoinGecko: {e}")
+
+        api_url = "https://api.scraperapi.com"
+        params = {
+            "api_key": "613bbb0380b1213539a066b881f2bd03",
+            "url": url,
+        }
+        response = requests.get(api_url, params=params)
+        soup = BeautifulSoup(response.content, "html.parser")
+        price_per_sqm_rows = soup.find("tbody").find_all("tr")
+
+        total_price = 0
+        count = 0
+        for row in price_per_sqm_rows:
+            cells = row.find_all("td")
+            if len(cells) > 1:
+                price_cell = cells[1].get_text(strip=True).replace(" ", "")
+                try:
+                    price = float(price_cell)
+                    total_price += price
+                    count += 1
+                except ValueError:
+                    continue
+
+        return total_price / count if count > 0 else None
+    
+    except Exception as e:
+        print(f"Failed to fetch sqm price via ScraperAPI: {e}")
         return None
 
 def get_btc_price_binance():
@@ -175,7 +155,7 @@ def get_btc_price_kraken():
         return None
 
 def get_btc_price_in_eur() -> float:
-    for source in [get_btc_price_coingecko, get_btc_price_binance, get_btc_price_kraken]:
+    for source in [get_btc_price_binance, get_btc_price_kraken]:
         price = source()
         if price:
             logging.info(f"BTC Price from {source.__name__}: {price} EUR")

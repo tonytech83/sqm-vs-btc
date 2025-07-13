@@ -23,7 +23,7 @@ jobs:
         run: pip install --upgrade pip && pip install -r requirements.txt
 
       - name: Start Flask App
-        run: gunicorn app:app --bind 0.0.0.0:5000 &
+        run: gunicorn app:app --bind 0.0.0.0:5000
 
       # - name: Check Index Endpoint
       #   run: |
