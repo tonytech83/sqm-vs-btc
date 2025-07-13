@@ -109,7 +109,7 @@ def get_sqm_price_in_eur() -> float:
             print(f"Trying proxy: {proxy}")
             response = requests.get(
                 url,
-                timeout=20,
+                timeout=60,
                 proxies={"http": proxy, "https": proxy},
                 headers={"User-Agent": "Mozilla/5.0"}
             )
