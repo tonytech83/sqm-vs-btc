@@ -7,6 +7,8 @@ import psycopg2 as db
 from psycopg2.extras import RealDictCursor
 import requests
 from bs4 import BeautifulSoup
+import random
+import time
 
 
 def prepare_json() -> List[Dict]:
@@ -80,47 +82,64 @@ def get_latest_prices() -> Dict:
             conn.close()
 
 
-def get_sqm_price_in_eur() -> float:
+def fetch_proxies_from_api() -> list:
     """
-    Scrapes the average square meter price in EUR from imoti.net for properties in Sofia.
-
-    Returns:
-        float | None: The average price per square meter in EUR.
-        Returns None if scraping fails or no valid prices are found.
-
-    Raises:
-        requests.exceptions.RequestException: If the HTTP request fails.
-
-    Note:
-        Scrapes data from https://www.imoti.net/bg/sredni-ceni
-        Processes only numeric values, skipping any non-numeric entries.
-        Uses a 30-second timeout for the HTTP request.
+    Fetches a list of HTTPS proxies from a public API.
+    Returns a list of proxy strings in the format 'http://ip:port'.
     """
+    url = "https://www.proxy-list.download/api/v1/get?type=https"
     try:
-        url = "https://www.imoti.net/bg/sredni-ceni"
-        response = requests.get(url, timeout=60)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching SQM price: {e}")
-        return None
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        proxies = resp.text.strip().split('\r\n')
+        # Format for requests
+        return [f"http://{proxy}" for proxy in proxies if proxy]
+    except Exception as e:
+        print(f"Failed to fetch proxies: {e}")
+        return []
 
-    soup = BeautifulSoup(response.content, "html.parser")
-    price_per_sqm_rows = soup.find("tbody").find_all("tr")
 
-    total_price = 0
-    count = 0
-    for row in price_per_sqm_rows:
-        cells = row.find_all("td")
-        if len(cells) > 1:
-            price_cell = cells[1].get_text(strip=True).replace(" ", "")
-            try:
-                price = float(price_cell)
-                total_price += price
-                count += 1
-            except ValueError:
-                continue
+def get_sqm_price_in_eur() -> float:
+    url = "https://www.imoti.net/bg/sredni-ceni"
+    proxies = fetch_proxies_from_api()
+    random.shuffle(proxies)  # Shuffle to randomize attempts
 
-    return total_price / count if count > 0 else None
+    for proxy in proxies:
+        try:
+            print(f"Trying proxy: {proxy}")
+            response = requests.get(
+                url,
+                timeout=20,
+                proxies={"http": proxy, "https": proxy},
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, "html.parser")
+            price_per_sqm_rows = soup.find("tbody").find_all("tr")
+
+            total_price = 0
+            count = 0
+            for row in price_per_sqm_rows:
+                cells = row.find_all("td")
+                if len(cells) > 1:
+                    price_cell = cells[1].get_text(strip=True).replace(" ", "")
+                    try:
+                        price = float(price_cell)
+                        total_price += price
+                        count += 1
+                    except ValueError:
+                        continue
+
+            if count > 0:
+                return total_price / count
+            else:
+                return None
+        except Exception as e:
+            print(f"Proxy {proxy} failed: {e}")
+            time.sleep(2)  # Wait before trying next proxy
+
+    print("All proxies failed or site is unreachable.")
+    return None
 
 def get_btc_price_coingecko():
     url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur"
