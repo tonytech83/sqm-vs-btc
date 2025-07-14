@@ -79,6 +79,7 @@ pip install -r requirements.txt
    - `DB_PASSWORD`
    - `DB_HOST`
    - `DB_PORT`
+   - `SCRAPER_API_KEY`
 
 2. Start the application:
 ```sh

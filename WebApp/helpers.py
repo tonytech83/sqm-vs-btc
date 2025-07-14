@@ -7,8 +7,8 @@ import psycopg2 as db
 from psycopg2.extras import RealDictCursor
 import requests
 from bs4 import BeautifulSoup
-import random
-import time
+# import random
+# import time
 
 
 def prepare_json() -> List[Dict]:
@@ -51,6 +51,7 @@ def prepare_json() -> List[Dict]:
         if conn is not None:
             conn.close()
 
+
 def get_latest_prices() -> Dict:
     """
     Retrieves the latest entry from the database.
@@ -69,10 +70,10 @@ def get_latest_prices() -> Dict:
             port=os.getenv("DB_PORT"),
         )
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
+
         cursor.execute("SELECT * FROM data ORDER BY id DESC LIMIT 1")
         latest_entry = cursor.fetchone()
-        
+
         return latest_entry
     except db.Error as e:
         logging.error(f"Database error: {e}")
@@ -82,31 +83,13 @@ def get_latest_prices() -> Dict:
             conn.close()
 
 
-def fetch_proxies_from_api() -> list:
-    """
-    Fetches a list of HTTPS proxies from a public API.
-    Returns a list of proxy strings in the format 'http://ip:port'.
-    """
-    url = "https://www.proxy-list.download/api/v1/get?type=https"
-    try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
-        proxies = resp.text.strip().split('\r\n')
-        # Format for requests
-        return [f"http://{proxy}" for proxy in proxies if proxy]
-    except Exception as e:
-        print(f"Failed to fetch proxies: {e}")
-        return []
-
-
 def get_sqm_price_in_eur() -> float:
     url = "https://www.imoti.net/bg/sredni-ceni"
+    api_url = "https://api.scraperapi.com"
 
     try:
-
-        api_url = "https://api.scraperapi.com"
         params = {
-            "api_key": "613bbb0380b1213539a066b881f2bd03",
+            "api_key": os.getenv("SCRAPER_API_KEY"),
             "url": url,
         }
         response = requests.get(api_url, params=params)
@@ -127,10 +110,11 @@ def get_sqm_price_in_eur() -> float:
                     continue
 
         return total_price / count if count > 0 else None
-    
+
     except Exception as e:
         print(f"Failed to fetch sqm price via ScraperAPI: {e}")
         return None
+
 
 def get_btc_price_binance():
     url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCEUR"
@@ -143,6 +127,7 @@ def get_btc_price_binance():
         logging.error(f"Error fetching BTC price from Binance: {e}")
         return None
 
+
 def get_btc_price_kraken():
     url = "https://api.kraken.com/0/public/Ticker?pair=XBTEUR"
     try:
@@ -153,6 +138,7 @@ def get_btc_price_kraken():
     except requests.RequestException as e:
         logging.error(f"Error fetching BTC price from Kraken: {e}")
         return None
+
 
 def get_btc_price_in_eur() -> float:
     for source in [get_btc_price_binance, get_btc_price_kraken]:
@@ -205,12 +191,14 @@ def get_prices_and_ratio() -> None:
             """
         )
 
+        # Check if today's entry already exists
         today = datetime.now().strftime("%d %b %Y")
         cursor.execute("SELECT 1 FROM data WHERE date = %s", (today,))
         if cursor.fetchone():
             logging.info(f"Entry for {today} already exists. Skipping.")
             return
 
+        # Fetch current prices if not already fetched for today
         sqm_price = get_sqm_price_in_eur()
         btc_price = get_btc_price_in_eur()
 
