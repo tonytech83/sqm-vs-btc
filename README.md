@@ -1,5 +1,8 @@
 [![Build and Deploy](https://github.com/tonytech83/sqm-vs-btc/actions/workflows/main.yml/badge.svg)](https://github.com/tonytech83/sqm-vs-btc/actions/workflows/main.yml)
 [![Schedule for GET requests](https://github.com/tonytech83/sqm-vs-btc/actions/workflows/keep_it_alive.yml/badge.svg)](https://github.com/tonytech83/sqm-vs-btc/actions/workflows/keep_it_alive.yml)
+![Last Commit](https://img.shields.io/github/last-commit/tonytech83/sqm-vs-btc)
+![Repo Size](https://img.shields.io/github/repo-size/tonytech83/sqm-vs-btc)
+![License](https://img.shields.io/github/license/tonytech83/sqm-vs-btc)
 
 # SQM vs BTC
 
