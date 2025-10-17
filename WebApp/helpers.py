@@ -1,17 +1,17 @@
 import logging
 import os
 from datetime import datetime
-from typing import List, Dict
 
 import psycopg2 as db
-from psycopg2.extras import RealDictCursor
 import requests
 from bs4 import BeautifulSoup
-# import random
-# import time
+from psycopg2.extras import RealDictCursor
+
+logger = logging.getLogger(__name__)
+logger.info("Foobar")
 
 
-def prepare_json() -> List[Dict]:
+def prepare_json() -> list[dict]:
     """
     Retrieves all entries from the database and returns them as a list of dictionaries.
 
@@ -22,6 +22,7 @@ def prepare_json() -> List[Dict]:
     Note:
         Uses RealDictCursor for dictionary-style results.
         Automatically closes database connection in finally block.
+
     """
     # Initialize conn to None
     conn = None
@@ -41,24 +42,26 @@ def prepare_json() -> List[Dict]:
         db_entries = cursor.fetchall()
 
         # Debugging: Log the number of entries fetched
-        logging.info(f"Fetched {len(db_entries)} entries from the database.")
+        logger.info("Fetched %s entries from the database.", len(db_entries))
 
-        return db_entries
-    except db.Error as e:
-        logging.error(f"Database error: {e}")
+    except db.Error:
+        logger.exception("Database error")
         return []
+    else:
+        return db_entries
     finally:
         if conn is not None:
             conn.close()
 
 
-def get_latest_prices() -> Dict:
+def get_latest_prices():
     """
     Retrieves the latest entry from the database.
 
     Returns:
         Dict: The latest database entry containing btc_price and sqm_price.
         Returns None if there's an error or no entries exist.
+
     """
     conn = None
     try:
@@ -74,16 +77,30 @@ def get_latest_prices() -> Dict:
         cursor.execute("SELECT * FROM data ORDER BY id DESC LIMIT 1")
         latest_entry = cursor.fetchone()
 
-        return latest_entry
-    except db.Error as e:
-        logging.error(f"Database error: {e}")
+    except db.Error:
+        logger.exception("Database error")
         return None
+    else:
+        return latest_entry
     finally:
         if conn is not None:
             conn.close()
 
 
 def get_sqm_price_in_eur() -> float:
+    """
+    Scrapes the average residential price per square meter in EUR.
+
+    Implementation details:
+    - Uses ScraperAPI (`SCRAPER_API_KEY` env var) to fetch `https://www.imoti.net/bg/sredni-ceni`.
+    - Parses the table rows and computes the arithmetic mean of the values in the
+      second column.
+
+    Returns:
+        float | None: The average price per square meter in EUR if parsing succeeds,
+        otherwise None. On failure, a descriptive error is logged.
+
+    """
     url = "https://www.imoti.net/bg/sredni-ceni"
     api_url = "https://api.scraperapi.com"
 
@@ -92,7 +109,7 @@ def get_sqm_price_in_eur() -> float:
             "api_key": os.getenv("SCRAPER_API_KEY"),
             "url": url,
         }
-        response = requests.get(api_url, params=params)
+        response = requests.get(api_url, timeout=60, params=params)
         soup = BeautifulSoup(response.content, "html.parser")
         price_per_sqm_rows = soup.find("tbody").find_all("tr")
 
@@ -111,49 +128,79 @@ def get_sqm_price_in_eur() -> float:
 
         return total_price / count if count > 0 else None
 
-    except Exception as e:
-        print(f"Failed to fetch sqm price via ScraperAPI: {e}")
+    except Exception:
+        logger.exception("Failed to fetch sqm price via ScraperAPI")
         return None
 
 
-def get_btc_price_binance():
+def get_btc_price_binance() -> float | None:
+    """
+    Fetches the latest BTC/EUR price from Binance public API.
+
+    Endpoint: `https://api.binance.com/api/v3/ticker/price?symbol=BTCEUR`
+
+    Returns:
+        float | None: Latest BTC price in EUR when available; otherwise None.
+        Network/HTTP errors are caught and logged.
+
+    """
     url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCEUR"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
         return float(data["price"])
-    except requests.RequestException as e:
-        logging.error(f"Error fetching BTC price from Binance: {e}")
+    except requests.RequestException:
+        logger.exception("Error fetching BTC price from Binance")
         return None
 
 
-def get_btc_price_kraken():
+def get_btc_price_kraken() -> float | None:
+    """
+    Fetches the latest BTC/EUR price from Kraken public API.
+
+    Endpoint: `https://api.kraken.com/0/public/Ticker?pair=XBTEUR`
+
+    Returns:
+        float | None: Latest BTC price in EUR when available; otherwise None.
+        Network/HTTP errors are caught and logged.
+
+    """
     url = "https://api.kraken.com/0/public/Ticker?pair=XBTEUR"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
         return float(data["result"]["XXBTZEUR"]["c"][0])
-    except requests.RequestException as e:
-        logging.error(f"Error fetching BTC price from Kraken: {e}")
+    except requests.RequestException:
+        logger.exception("Error fetching BTC price from Kraken")
         return None
 
 
-def get_btc_price_in_eur() -> float:
+def get_btc_price_in_eur() -> float | None:
+    """
+    Returns the first successfully retrieved BTC/EUR price from multiple sources.
+
+    Strategy:
+    - Tries Binance, then Kraken in order.
+    - Logs the selected source and price when successful; logs an error if all fail.
+
+    Returns:
+        float | None: BTC price in EUR if any source succeeds; otherwise None.
+
+    """
     for source in [get_btc_price_binance, get_btc_price_kraken]:
-        price = source()
+        price: float | None = source()
         if price:
-            logging.info(f"BTC Price from {source.__name__}: {price} EUR")
+            logger.info("BTC Price from %s: %s EUR", source.__name__, price)
             return price
-    logging.error("Failed to fetch BTC price from all sources.")
+    logger.exception("Failed to fetch BTC price from all sources.")
     return None
 
 
 def get_prices_and_ratio() -> None:
     """
-    Fetches current BTC and square meter prices, calculates their ratio,
-    and stores the data in the database.
+    Fetches current BTC and square meter prices, calculates their ratio, and stores the data in the database.
 
     The function:
     1. Creates the data table if it doesn't exist
@@ -167,6 +214,7 @@ def get_prices_and_ratio() -> None:
         - Uses ON CONFLICT DO NOTHING for date uniqueness
         - Automatically closes database connection in finally block
         - Logs all significant events and errors
+
     """
     conn = None  # Initialize conn to None
     try:
@@ -188,14 +236,14 @@ def get_prices_and_ratio() -> None:
                 sqm_price NUMERIC(18, 8) NOT NULL,
                 ratio NUMERIC(20, 18) NOT NULL
             )
-            """
+            """,
         )
 
         # Check if today's entry already exists
-        today = datetime.now().strftime("%d %b %Y")
+        today = datetime.now(tz=datetime.UTC).strftime("%d %b %Y")
         cursor.execute("SELECT 1 FROM data WHERE date = %s", (today,))
         if cursor.fetchone():
-            logging.info(f"Entry for {today} already exists. Skipping.")
+            logger.info("Entry for %s already exists. Skipping.", today)
             return
 
         # Fetch current prices if not already fetched for today
@@ -203,10 +251,10 @@ def get_prices_and_ratio() -> None:
         btc_price = get_btc_price_in_eur()
 
         if sqm_price is None or btc_price is None:
-            logging.error("Failed to fetch data. Skipping database insertion.")
+            logger.exception("Failed to fetch data. Skipping database insertion.")
             return
 
-        ratio = sqm_price / btc_price
+        ratio: float = sqm_price / btc_price
 
         cursor.execute(
             """
@@ -216,11 +264,11 @@ def get_prices_and_ratio() -> None:
             """,
             (today, btc_price, sqm_price, ratio),
         )
-        logging.info(f"Added new entry for {today}")
+        logger.info("Added new entry for %s", today)
 
         conn.commit()
-    except db.Error as e:
-        logging.error(f"Database error: {e}")
+    except db.Error:
+        logger.exception("Database error")
     finally:
         if conn is not None:
             conn.close()

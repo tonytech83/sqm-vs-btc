@@ -1,9 +1,9 @@
 import os
+
 from flask import Flask, g
 
-from WebApp.helpers import get_sqm_price_in_eur, get_btc_price_in_eur
-from WebApp.views import IndexView, DataView, UpdateDBView
-
+from WebApp.helpers import get_btc_price_in_eur, get_sqm_price_in_eur
+from WebApp.views import DataView, IndexView, UpdateDBView
 
 # Initialise Flask App
 app = Flask(
