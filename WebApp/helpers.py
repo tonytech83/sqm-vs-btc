@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 import psycopg2 as db
@@ -280,7 +280,7 @@ def get_prices_and_ratio() -> None:
         )
 
         # Check if today's entry already exists
-        today: str = datetime.now(tz=datetime.UTC).strftime("%d %b %Y")
+        today: str = datetime.now(tz=timezone.utc).strftime("%d %b %Y")
         cursor.execute("SELECT 1 FROM data WHERE date = %s", (today,))
         if cursor.fetchone():
             logger.info("Entry for %s already exists. Skipping.", today)
