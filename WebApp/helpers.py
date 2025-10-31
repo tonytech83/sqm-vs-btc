@@ -1,11 +1,17 @@
 import logging
 import os
 from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 import psycopg2 as db
 import requests
 from bs4 import BeautifulSoup
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, RealDictRow
+from requests.models import Response
+
+if TYPE_CHECKING:
+    from bs4.element import ResultSet
+    from flask import Response
 
 logger = logging.getLogger(__name__)
 logger.info("Foobar")
@@ -35,11 +41,11 @@ def prepare_json() -> list[dict]:
             port=os.getenv("DB_PORT"),
         )
         # Use RealDictCursor for dict rows
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor: RealDictCursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        cursor.execute("SELECT * FROM data")
+        cursor.execute(query="SELECT * FROM data")
         # Fetch rows as dictionaries
-        db_entries = cursor.fetchall()
+        db_entries: list[RealDictRow] = cursor.fetchall()
 
         # Debugging: Log the number of entries fetched
         logger.info("Fetched %s entries from the database.", len(db_entries))
@@ -47,6 +53,7 @@ def prepare_json() -> list[dict]:
     except db.Error:
         logger.exception("Database error")
         return []
+
     else:
         return db_entries
     finally:
@@ -54,7 +61,7 @@ def prepare_json() -> list[dict]:
             conn.close()
 
 
-def get_latest_prices():
+def get_latest_prices() -> RealDictRow | None:
     """
     Retrieves the latest entry from the database.
 
@@ -72,10 +79,10 @@ def get_latest_prices():
             host=os.getenv("DB_HOST"),
             port=os.getenv("DB_PORT"),
         )
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor: RealDictCursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        cursor.execute("SELECT * FROM data ORDER BY id DESC LIMIT 1")
-        latest_entry = cursor.fetchone()
+        cursor.execute(query="SELECT * FROM data ORDER BY id DESC LIMIT 1")
+        latest_entry: RealDictRow | None = cursor.fetchone()
 
     except db.Error:
         logger.exception("Database error")
@@ -87,40 +94,73 @@ def get_latest_prices():
             conn.close()
 
 
+def get_proxies_as_dict() -> dict[int, str]:
+    """
+    Fetches a list of public HTTPS proxies and returns them as a dict usable by requests.
+
+    Source:
+        https://www.proxy-list.download/api/v1/get?type=https
+
+    Returns:
+        dict[int, str]: Mapping of 1-based index to proxy URL with the https scheme
+        (e.g., {1: "https://ip:port", 2: "https://ip:port", ...}). May raise on
+        non-2xx responses.
+
+    Notes:
+        The returned mapping is passed directly to `requests.get(..., proxies=...)`.
+        This function does not perform validation of proxy liveness.
+
+    """
+    response = requests.get(
+        "https://www.proxy-list.download/api/v1/get?type=https",
+        timeout=10,
+    )
+
+    response.raise_for_status()
+
+    # split the response
+    lines = response.text.strip().split("\n")
+
+    # create a dict with index
+    proxies = {
+        i + 1: f"https://{line.strip()}" for i, line in enumerate(lines) if line.strip()
+    }
+
+    return proxies
+
+
 def get_sqm_price_in_eur() -> float:
     """
-    Scrapes the average residential price per square meter in EUR.
+    Scrapes the average residential price per square meter (EUR) from imoti.net.
 
     Implementation details:
-    - Uses ScraperAPI (`SCRAPER_API_KEY` env var) to fetch `https://www.imoti.net/bg/sredni-ceni`.
-    - Parses the table rows and computes the arithmetic mean of the values in the
+    - Retrieves a set of public HTTPS proxies via `get_proxies_as_dict` and uses
+      them with `requests` to fetch `https://www.imoti.net/bg/sredni-ceni`.
+    - Parses the price table and computes the arithmetic mean of the values in the
       second column.
 
     Returns:
-        float | None: The average price per square meter in EUR if parsing succeeds,
-        otherwise None. On failure, a descriptive error is logged.
+        float | None: The average price per square meter in EUR if parsing succeeds;
+        otherwise None. Errors are logged.
 
     """
+    proxies = get_proxies_as_dict()
+
     url = "https://www.imoti.net/bg/sredni-ceni"
-    api_url = "https://api.scraperapi.com"
 
     try:
-        params = {
-            "api_key": os.getenv("SCRAPER_API_KEY"),
-            "url": url,
-        }
-        response = requests.get(api_url, timeout=60, params=params)
-        soup = BeautifulSoup(response.content, "html.parser")
-        price_per_sqm_rows = soup.find("tbody").find_all("tr")
+        response = requests.get(url, timeout=60, proxies=proxies)
+        soup: BeautifulSoup = BeautifulSoup(response.content, "html.parser")
+        price_per_sqm_rows: ResultSet[Any] | Any = soup.find("tbody").find_all("tr")
 
         total_price = 0
         count = 0
         for row in price_per_sqm_rows:
             cells = row.find_all("td")
             if len(cells) > 1:
-                price_cell = cells[1].get_text(strip=True).replace(" ", "")
+                price_cell: Any = cells[1].get_text(strip=True).replace(" ", "")
                 try:
-                    price = float(price_cell)
+                    price: float = float(price_cell)
                     total_price += price
                     count += 1
                 except ValueError:
@@ -129,7 +169,7 @@ def get_sqm_price_in_eur() -> float:
         return total_price / count if count > 0 else None
 
     except Exception:
-        logger.exception("Failed to fetch sqm price via ScraperAPI")
+        logger.exception(msg="Failed to fetch sqm price via ScraperAPI")
         return None
 
 
@@ -146,12 +186,12 @@ def get_btc_price_binance() -> float | None:
     """
     url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCEUR"
     try:
-        response = requests.get(url, timeout=10)
+        response: Response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
         return float(data["price"])
     except requests.RequestException:
-        logger.exception("Error fetching BTC price from Binance")
+        logger.exception(msg="Error fetching BTC price from Binance")
         return None
 
 
@@ -168,12 +208,12 @@ def get_btc_price_kraken() -> float | None:
     """
     url = "https://api.kraken.com/0/public/Ticker?pair=XBTEUR"
     try:
-        response = requests.get(url, timeout=10)
+        response: Response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
         return float(data["result"]["XXBTZEUR"]["c"][0])
     except requests.RequestException:
-        logger.exception("Error fetching BTC price from Kraken")
+        logger.exception(msg="Error fetching BTC price from Kraken")
         return None
 
 
@@ -194,7 +234,7 @@ def get_btc_price_in_eur() -> float | None:
         if price:
             logger.info("BTC Price from %s: %s EUR", source.__name__, price)
             return price
-    logger.exception("Failed to fetch BTC price from all sources.")
+    logger.exception(msg="Failed to fetch BTC price from all sources.")
     return None
 
 
@@ -240,15 +280,15 @@ def get_prices_and_ratio() -> None:
         )
 
         # Check if today's entry already exists
-        today = datetime.now(tz=datetime.UTC).strftime("%d %b %Y")
+        today: str = datetime.now(tz=datetime.UTC).strftime("%d %b %Y")
         cursor.execute("SELECT 1 FROM data WHERE date = %s", (today,))
         if cursor.fetchone():
             logger.info("Entry for %s already exists. Skipping.", today)
             return
 
         # Fetch current prices if not already fetched for today
-        sqm_price = get_sqm_price_in_eur()
-        btc_price = get_btc_price_in_eur()
+        sqm_price: float = get_sqm_price_in_eur()
+        btc_price: float | None = get_btc_price_in_eur()
 
         if sqm_price is None or btc_price is None:
             logger.exception("Failed to fetch data. Skipping database insertion.")
