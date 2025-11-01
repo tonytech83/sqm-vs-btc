@@ -1,25 +1,26 @@
 from datetime import datetime
 from functools import lru_cache
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from flask import jsonify, render_template
 from flask.views import View
+from flask.wrappers import Response
 
 from WebApp.helpers import get_latest_prices, get_prices_and_ratio, prepare_json
 
 
 @lru_cache(maxsize=1)
-def cached_data():
+def cached_data() -> list[dict]:
     return prepare_json()
 
 
 class IndexView(View):
     methods: ClassVar[list[str]] = ["GET"]
 
-    def __init__(self, template):
+    def __init__(self, template) -> None:
         self.template = template
 
-    def dispatch_request(self):
+    def dispatch_request(self) -> str:
         latest_data = get_latest_prices()
 
         if latest_data:
@@ -40,14 +41,14 @@ class IndexView(View):
 class DataView(View):
     methods: ClassVar[list[str]] = ["GET"]
 
-    def dispatch_request(self):
+    def dispatch_request(self) -> Response:
         return jsonify(cached_data())
 
 
 class UpdateDBView(View):
     methods: ClassVar[list[str]] = ["GET"]
 
-    def dispatch_request(self):
+    def dispatch_request(self) -> Response:
         get_prices_and_ratio()
 
         return jsonify({"status": "Database updated"})

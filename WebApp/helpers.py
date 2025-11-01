@@ -13,6 +13,14 @@ if TYPE_CHECKING:
     from bs4.element import ResultSet
     from flask import Response
 
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Always load the .env file from the project root
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
 logger = logging.getLogger(__name__)
 logger.info("Foobar")
 
@@ -144,7 +152,7 @@ def get_sqm_price_in_eur() -> float:
         otherwise None. Errors are logged.
 
     """
-    proxies = get_proxies_as_dict()
+    proxies: dict[int, str] = get_proxies_as_dict()
 
     url = "https://www.imoti.net/bg/sredni-ceni"
 

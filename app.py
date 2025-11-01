@@ -15,7 +15,7 @@ app = Flask(
 
 
 @app.before_request
-def preload_data():
+def preload_data() -> None:
     if not hasattr(g, "data_preloaded"):
         try:
             btc_price = get_btc_price_in_eur()
