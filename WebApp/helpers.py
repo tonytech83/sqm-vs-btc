@@ -269,7 +269,7 @@ def get_prices_and_ratio() -> None:
         )
 
         # Check if today's entry already exists
-        today: str = datetime.now(tz=timezone.utc).strftime("%d %b %Y")
+        today: str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
         cursor.execute("SELECT 1 FROM data WHERE date = %s", (today,))
         if cursor.fetchone():
             logger.info("Entry for %s already exists. Skipping.", today)
