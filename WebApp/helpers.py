@@ -1,16 +1,14 @@
 import logging
 import os
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import psycopg2 as db
 import requests
-from bs4 import BeautifulSoup
 from psycopg2.extras import RealDictCursor, RealDictRow
 from requests.models import Response
 
 if TYPE_CHECKING:
-    from bs4.element import ResultSet
     from flask import Response
 
 from pathlib import Path
@@ -101,8 +99,6 @@ def get_latest_prices() -> RealDictRow | None:
         if conn is not None:
             conn.close()
 
-
-def get_proxies_as_dict() -> dict[int, str]:
     """
     Fetches a list of public HTTPS proxies and returns them as a dict usable by requests.
 
@@ -137,48 +133,33 @@ def get_proxies_as_dict() -> dict[int, str]:
     return proxies
 
 
-def get_sqm_price_in_eur() -> float:
+def get_sqm_price_in_eur() -> float | None:
     """
-    Scrapes the average residential price per square meter (EUR) from imoti.net.
-
-    Implementation details:
-    - Retrieves a set of public HTTPS proxies via `get_proxies_as_dict` and uses
-      them with `requests` to fetch `https://www.imoti.net/bg/sredni-ceni`.
-    - Parses the price table and computes the arithmetic mean of the values in the
-      second column.
+    Calls the private scraper API for the current SQM average price expressed in EUR.
 
     Returns:
-        float | None: The average price per square meter in EUR if parsing succeeds;
-        otherwise None. Errors are logged.
+        float | None: Latest SQM price when the request succeeds; otherwise None.
+        Network/HTTP/JSON errors are logged and swallowed to keep caller resilient.
 
     """
-    proxies: dict[int, str] = get_proxies_as_dict()
-
-    url = "https://www.imoti.net/bg/sredni-ceni"
+    url = "https://scraper-api.tonytech.xyz/sqm-price"
+    headers = {
+        "x-api-key": os.getenv("API_KEY"),
+    }
 
     try:
-        response = requests.get(url, timeout=60, proxies=proxies)
-        soup: BeautifulSoup = BeautifulSoup(response.content, "html.parser")
-        price_per_sqm_rows: ResultSet[Any] | Any = soup.find("tbody").find_all("tr")
+        response = requests.get(url, timeout=60, headers=headers)
+        response.raise_for_status()  # raises if HTTP 4xx/5xx
 
-        total_price = 0
-        count = 0
-        for row in price_per_sqm_rows:
-            cells = row.find_all("td")
-            if len(cells) > 1:
-                price_cell: Any = cells[1].get_text(strip=True).replace(" ", "")
-                try:
-                    price: float = float(price_cell)
-                    total_price += price
-                    count += 1
-                except ValueError:
-                    continue
-
-        return total_price / count if count > 0 else None
+        data = response.json()
+        avg_price = float(data["avg_price"])
 
     except Exception:
-        logger.exception(msg="Failed to fetch sqm price via ScraperAPI")
+        logger.exception(msg="Failed to fetch sqm price from private API")
         return None
+
+    else:
+        return avg_price
 
 
 def get_btc_price_binance() -> float | None:
@@ -320,6 +301,3 @@ def get_prices_and_ratio() -> None:
     finally:
         if conn is not None:
             conn.close()
-
-
-get_prices_and_ratio()
