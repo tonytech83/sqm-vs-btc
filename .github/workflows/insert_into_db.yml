@@ -5,6 +5,8 @@ on:
     - cron: '0 0 * * *' # Run once per day at midnight UTC
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   insert-into-database:
     runs-on: ubuntu-latest
