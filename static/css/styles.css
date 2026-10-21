@@ -32,7 +32,7 @@ body {
 }
 
 .page-title {
-  margin: 100px 0 50px 0;
+  margin: 30px 0 30px 0;
   text-align: center;
 }
 
@@ -55,8 +55,15 @@ table {
   margin-bottom: 50px;
 }
 
+td {
+  padding: 0 20px;
+}
+
 .td-title {
-  padding-right: 40px;
+  display: block;
+  font-size: 15px;
+  font-weight: 300;
+  padding-bottom: 6px;
 }
 
 .controls {
