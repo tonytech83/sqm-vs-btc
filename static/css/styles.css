@@ -101,6 +101,41 @@ td {
   color: #eceff4;
 }
 
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 16px 20px;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.controls button {
+  background-color: #3b4252;
+  color: #d8dee9;
+  border: 1px solid #4c566a;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.controls button:hover {
+  background-color: #434c5e;
+}
+
+.controls button.active {
+  background-color: #5e81ac;
+  border-color: #81a1c1;
+  color: #eceff4;
+}
+
 .footer {
   font-size: 14px;
   padding: 10px 0;
