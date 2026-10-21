@@ -35,4 +35,4 @@ class TestUpdateDBView(unittest.TestCase):
     def test_update_db(self) -> None:
         response = self.app.get("/update-db")
         self.assertEqual(response.status_code, SUCCESS_CODE)
-        self.assertEqual(response.json["status"], "Database updated")
+        self.assertIn(response.json["status"], ["inserted", "exists"])

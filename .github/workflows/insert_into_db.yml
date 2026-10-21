@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Trigger database update via API
         run: |
-          curl -X GET https://sqm-vs-btc.onrender.com/update-db
+          curl -fsS --max-time 300 https://sqm-vs-btc.onrender.com/update-db
     
       - name: Delete old scheduled workflow runs
         uses: MajorScruffy/delete-old-workflow-runs@v0.3.0

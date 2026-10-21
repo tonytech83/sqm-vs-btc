@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SQM vs BTC</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
@@ -34,10 +34,32 @@
           <td>{{ btc_price if btc_price else 'Unavailable' }} €</td>
         </tr>
         <tr>
-          <td class="td-title">Ratio</td>
-          <td>SQM / BTC</td>
+          <td class="td-title">Ratio (SQM / BTC)</td>
+          <td>{{ ratio if ratio else 'Unavailable' }}</td>
+        </tr>
+        <tr>
+          <td class="td-title">m² per 1 BTC</td>
+          <td>{{ sqm_per_btc if sqm_per_btc else 'Unavailable' }}</td>
         </tr>
       </table>
+
+      <div class="controls">
+        <div class="button-group">
+          <button class="tab active" data-value="btc">BTC</button>
+          <button class="tab" data-value="sqm">SQM</button>
+          <button class="tab" data-value="ratio">Ratio</button>
+          <button class="tab" data-value="m2">m² per BTC</button>
+          <button class="tab" data-value="btcRatio">BTC + Ratio</button>
+          <button class="tab" data-value="sqmRatio">SQM + Ratio</button>
+          <button class="tab" data-value="growth">Growth</button>
+        </div>
+        <div class="button-group">
+          <button class="range" data-value="30">30D</button>
+          <button class="range" data-value="90">90D</button>
+          <button class="range" data-value="365">1Y</button>
+          <button class="range active" data-value="all">All</button>
+        </div>
+      </div>
 
       <canvas id="priceChart" width="400" height="200"></canvas>
     </div>

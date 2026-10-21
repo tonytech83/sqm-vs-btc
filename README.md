@@ -17,12 +17,10 @@ A Flask-based web application that compares the average price per square meter o
 ## Features
 
 - **Web Interface**: Displays the latest data for sqm and BTC prices along with their ratio.
-  - Real estate prices are scraped from [Imoti.net](https://www.imoti.net/bg/sredni-ceni).
-  - Bitcoin prices are fetched from multiple sources including [CoinGecko](https://www.coingecko.com/), [Binance](https://www.binance.com/), and [Kraken](https://www.kraken.com/).
-- **Data Caching**: Cached results for efficient API response.
+  - Real estate prices come from [Imoti.net](https://www.imoti.net/bg/sredni-ceni) via a private scraper API.
+  - Bitcoin prices are fetched from [Binance](https://www.binance.com/), with [Kraken](https://www.kraken.com/) as fallback.
 - **PostgreSQL Integration**: Stores daily sqm and BTC prices with a unique entry per day.
 - **Error Handling**: Ensures no invalid data is stored in the database if fetching fails.
-- **Preloading Data**: Preloads sqm and BTC prices during the first request to optimize user experience.
 - **Logging**: Comprehensive logging for debugging and monitoring.
 
 ---
@@ -53,9 +51,8 @@ sqm-vs-btc/
 ```
 
 ## Requirements
-- Python 3.8+
+- Python 3.10+
 - Flask
-- BeautifulSoup (bs4)
 - Requests
 - PostgreSQL
 
@@ -82,7 +79,7 @@ pip install -r requirements.txt
    - `DB_PASSWORD`
    - `DB_HOST`
    - `DB_PORT`
-   - `SCRAPER_API_KEY`
+   - `API_KEY` (key for the private scraper API)
 
 2. Start the application:
 ```sh
