@@ -1,8 +1,7 @@
 import os
 
-from flask import Flask, g
+from flask import Flask
 
-from WebApp.helpers import get_btc_price_in_eur, get_sqm_price_in_eur
 from WebApp.views import DataView, IndexView, UpdateDBView
 
 # Initialise Flask App
@@ -12,26 +11,6 @@ app = Flask(
     static_folder="static",
     template_folder="templates",
 )
-
-
-@app.before_request
-def preload_data() -> None:
-    if not hasattr(g, "data_preloaded"):
-        try:
-            btc_price = get_btc_price_in_eur()
-            g.current_btc_price = f"{btc_price:.2f}" if btc_price is not None else "N/A"
-        except Exception as e:
-            app.logger.error(f"Failed to fetch BTC price: {str(e)}")
-            g.current_btc_price = "N/A"
-
-        try:
-            sqm_price = get_sqm_price_in_eur()
-            g.current_sqm_price = f"{sqm_price:.2f}" if sqm_price is not None else "N/A"
-        except Exception as e:
-            app.logger.error(f"Failed to fetch SQM price: {str(e)}")
-            g.current_sqm_price = "N/A"
-
-        g.data_preloaded = True
 
 
 # urlpatterns

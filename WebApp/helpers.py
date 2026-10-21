@@ -1,59 +1,49 @@
 import logging
 import os
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import psycopg2 as db
 import requests
-from psycopg2.extras import RealDictCursor, RealDictRow
-from requests.models import Response
-
-if TYPE_CHECKING:
-    from flask import Response
-
-from pathlib import Path
-
 from dotenv import load_dotenv
+from psycopg2.extensions import connection
+from psycopg2.extras import RealDictCursor, RealDictRow
 
 # Always load the .env file from the project root
 env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 logger = logging.getLogger(__name__)
-logger.info("Foobar")
+
+
+def _connect() -> connection:
+    """Opens a new PostgreSQL connection using the DB_* environment variables."""
+    return db.connect(
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+    )
 
 
 def prepare_json() -> list[dict]:
     """
-    Retrieves all entries from the database and returns them as a list of dictionaries.
+    Retrieves all entries from the database, oldest first.
 
     Returns:
         List[Dict]: A list of database entries as dictionaries.
         Returns an empty list if there's an error.
 
-    Note:
-        Uses RealDictCursor for dictionary-style results.
-        Automatically closes database connection in finally block.
-
     """
-    # Initialize conn to None
     conn = None
     try:
-        conn = db.connect(
-            dbname=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT"),
-        )
-        # Use RealDictCursor for dict rows
+        conn = _connect()
         cursor: RealDictCursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        cursor.execute(query="SELECT * FROM data")
-        # Fetch rows as dictionaries
+        cursor.execute(query="SELECT * FROM data ORDER BY date")
         db_entries: list[RealDictRow] = cursor.fetchall()
 
-        # Debugging: Log the number of entries fetched
         logger.info("Fetched %s entries from the database.", len(db_entries))
 
     except db.Error:
@@ -78,16 +68,10 @@ def get_latest_prices() -> RealDictRow | None:
     """
     conn = None
     try:
-        conn = db.connect(
-            dbname=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT"),
-        )
+        conn = _connect()
         cursor: RealDictCursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        cursor.execute(query="SELECT * FROM data ORDER BY id DESC LIMIT 1")
+        cursor.execute(query="SELECT * FROM data ORDER BY date DESC LIMIT 1")
         latest_entry: RealDictRow | None = cursor.fetchone()
 
     except db.Error:
@@ -98,39 +82,6 @@ def get_latest_prices() -> RealDictRow | None:
     finally:
         if conn is not None:
             conn.close()
-
-    """
-    Fetches a list of public HTTPS proxies and returns them as a dict usable by requests.
-
-    Source:
-        https://www.proxy-list.download/api/v1/get?type=https
-
-    Returns:
-        dict[int, str]: Mapping of 1-based index to proxy URL with the https scheme
-        (e.g., {1: "https://ip:port", 2: "https://ip:port", ...}). May raise on
-        non-2xx responses.
-
-    Notes:
-        The returned mapping is passed directly to `requests.get(..., proxies=...)`.
-        This function does not perform validation of proxy liveness.
-
-    """
-    response = requests.get(
-        "https://www.proxy-list.download/api/v1/get?type=https",
-        timeout=10,
-    )
-
-    response.raise_for_status()
-
-    # split the response
-    lines = response.text.strip().split("\n")
-
-    # create a dict with index
-    proxies = {
-        i + 1: f"https://{line.strip()}" for i, line in enumerate(lines) if line.strip()
-    }
-
-    return proxies
 
 
 def get_sqm_price_in_eur() -> float | None:
@@ -170,16 +121,16 @@ def get_btc_price_binance() -> float | None:
 
     Returns:
         float | None: Latest BTC price in EUR when available; otherwise None.
-        Network/HTTP errors are caught and logged.
+        Network/HTTP errors and unexpected response shapes are caught and logged.
 
     """
     url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCEUR"
     try:
-        response: Response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
         return float(data["price"])
-    except requests.RequestException:
+    except (requests.RequestException, KeyError, TypeError, ValueError):
         logger.exception(msg="Error fetching BTC price from Binance")
         return None
 
@@ -192,16 +143,16 @@ def get_btc_price_kraken() -> float | None:
 
     Returns:
         float | None: Latest BTC price in EUR when available; otherwise None.
-        Network/HTTP errors are caught and logged.
+        Network/HTTP errors and unexpected response shapes are caught and logged.
 
     """
     url = "https://api.kraken.com/0/public/Ticker?pair=XBTEUR"
     try:
-        response: Response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
         return float(data["result"]["XXBTZEUR"]["c"][0])
-    except requests.RequestException:
+    except (requests.RequestException, KeyError, IndexError, TypeError, ValueError):
         logger.exception(msg="Error fetching BTC price from Kraken")
         return None
 
@@ -223,11 +174,11 @@ def get_btc_price_in_eur() -> float | None:
         if price:
             logger.info("BTC Price from %s: %s EUR", source.__name__, price)
             return price
-    logger.exception(msg="Failed to fetch BTC price from all sources.")
+    logger.error("Failed to fetch BTC price from all sources.")
     return None
 
 
-def get_prices_and_ratio() -> None:
+def get_prices_and_ratio() -> str:
     """
     Fetches current BTC and square meter prices, calculates their ratio, and stores the data in the database.
 
@@ -238,22 +189,14 @@ def get_prices_and_ratio() -> None:
     4. Calculates the ratio
     5. Stores the new entry
 
-    Note:
-        - Skips insertion if an entry for today already exists
-        - Uses ON CONFLICT DO NOTHING for date uniqueness
-        - Automatically closes database connection in finally block
-        - Logs all significant events and errors
+    Returns:
+        str: "inserted" when today's entry was added, "exists" when it was already
+        there, or "failed" when a price could not be fetched or the database failed.
 
     """
-    conn = None  # Initialize conn to None
+    conn = None
     try:
-        conn = db.connect(
-            dbname=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT"),
-        )
+        conn = _connect()
         cursor = conn.cursor()
 
         cursor.execute(
@@ -267,21 +210,21 @@ def get_prices_and_ratio() -> None:
             )
             """,
         )
+        conn.commit()
 
         # Check if today's entry already exists
         today: str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
         cursor.execute("SELECT 1 FROM data WHERE date = %s", (today,))
         if cursor.fetchone():
             logger.info("Entry for %s already exists. Skipping.", today)
-            return
+            return "exists"
 
-        # Fetch current prices if not already fetched for today
-        sqm_price: float = get_sqm_price_in_eur()
+        sqm_price: float | None = get_sqm_price_in_eur()
         btc_price: float | None = get_btc_price_in_eur()
 
         if sqm_price is None or btc_price is None:
-            logger.exception("Failed to fetch data. Skipping database insertion.")
-            return
+            logger.error("Failed to fetch data. Skipping database insertion.")
+            return "failed"
 
         ratio: float = sqm_price / btc_price
 
@@ -293,11 +236,13 @@ def get_prices_and_ratio() -> None:
             """,
             (today, btc_price, sqm_price, ratio),
         )
-        logger.info("Added new entry for %s", today)
-
         conn.commit()
+        logger.info("Added new entry for %s", today)
     except db.Error:
         logger.exception("Database error")
+        return "failed"
+    else:
+        return "inserted"
     finally:
         if conn is not None:
             conn.close()
