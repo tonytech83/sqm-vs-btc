@@ -22,24 +22,11 @@
 
       <table>
         <tr>
-          <td class="td-title">Date</td>
-          <td>{{date}}</td>
-        </tr>
-        <tr>
-          <td class="td-title">SQM</td>
-          <td>{{sqm_price if sqm_price else 'Unavailable'}} €</td>
-        </tr>
-        <tr>
-          <td class="td-title">BTC</td>
-          <td>{{ btc_price if btc_price else 'Unavailable' }} €</td>
-        </tr>
-        <tr>
-          <td class="td-title">Ratio (SQM / BTC)</td>
-          <td>{{ ratio if ratio else 'Unavailable' }}</td>
-        </tr>
-        <tr>
-          <td class="td-title">m² per 1 BTC</td>
-          <td>{{ sqm_per_btc if sqm_per_btc else 'Unavailable' }}</td>
+          <td><span class="td-title">Date</span>{{ date }}</td>
+          <td><span class="td-title">SQM</span>{{ sqm_price ~ ' €' if sqm_price else 'Unavailable' }}</td>
+          <td><span class="td-title">BTC</span>{{ btc_price ~ ' €' if btc_price else 'Unavailable' }}</td>
+          <td><span class="td-title">Ratio (SQM / BTC)</span>{{ ratio if ratio else 'Unavailable' }}</td>
+          <td><span class="td-title">m² per 1 BTC</span>{{ sqm_per_btc if sqm_per_btc else 'Unavailable' }}</td>
         </tr>
       </table>
 
