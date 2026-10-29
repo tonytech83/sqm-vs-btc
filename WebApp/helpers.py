@@ -15,6 +15,8 @@ load_dotenv(dotenv_path=env_path)
 
 logger = logging.getLogger(__name__)
 
+API_URL = os.getenv("API_URL", "")
+
 
 def _connect() -> connection:
     """Opens a new PostgreSQL connection using the DB_* environment variables."""
@@ -93,7 +95,7 @@ def get_sqm_price_in_eur() -> float | None:
         Network/HTTP/JSON errors are logged and swallowed to keep caller resilient.
 
     """
-    url = "https://scraper-api.tonytech.xyz/sqm-price"
+    url = API_URL
     headers = {
         "x-api-key": os.getenv("API_KEY"),
     }
